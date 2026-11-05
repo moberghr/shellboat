@@ -245,6 +245,7 @@ public sealed partial class RdpTabViewModel : SessionTabViewModel, IRdpInputTarg
             return;
         }
 
+        _cursorCache.Scale = OperatingSystem.IsMacOS() ? _renderScaling : 1.0;
         if (_cursorCache.Resolve(c.Kind, c.CursorId, c.Width, c.Height, c.HotX, c.HotY) is { } resolved)
         {
             RemoteCursor = resolved;

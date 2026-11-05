@@ -30,14 +30,52 @@ internal sealed class RemoteCursorCache : IDisposable
     private readonly CopyCursorImageDelegate _copyCursorImage;
     // The source bitmap is kept beside its cursor purely so both can be released deterministically
     // on eviction; the platform cursor handle itself no longer reads from it.
-    private readonly Dictionary<uint, (Cursor Cursor, WriteableBitmap Bitmap)> _cursors = [];
+    private readonly Dictionary<uint, (Cursor Cursor, Bitmap Bitmap)> _cursors = [];
     private readonly Queue<uint> _insertionOrder = new();
     private Cursor? _hiddenCursor;
     private bool _disposed;
 
+    private double _scale = 1.0;
+
     public RemoteCursorCache(CopyCursorImageDelegate copyCursorImage)
     {
         _copyCursorImage = copyCursorImage;
+    }
+
+    /// <summary>
+    /// Remote pixels per local cursor unit. macOS sizes a custom cursor in points (a 64 px image becomes 64 pt =
+    /// 128 physical px on Retina), while the remote session — sized in physical pixels with its own DPI scale —
+    /// already drew the arrow at physical size; so on macOS this is the display's render scaling and the image is
+    /// shrunk by it. Windows and X11 take cursor bitmaps in physical pixels: 1. Changing it drops cached shapes.
+    /// </summary>
+    public double Scale
+    {
+        get => _scale;
+        set
+        {
+            var next = value > 0 ? value : 1.0;
+            if (Math.Abs(next - _scale) < 0.001)
+            {
+                return;
+            }
+
+            _scale = next;
+            ClearCursors();
+        }
+    }
+
+    /// <summary>Pure: the cursor image size and hotspot after dividing by <paramref name="scale"/> (never below
+    /// 1 px, hotspot kept inside the image).</summary>
+    public static (int Width, int Height, int HotX, int HotY) ScaleShape(int width, int height, int hotX, int hotY, double scale)
+    {
+        if (scale <= 1.0)
+        {
+            return (width, height, Math.Clamp(hotX, 0, width - 1), Math.Clamp(hotY, 0, height - 1));
+        }
+
+        var w = Math.Max(1, (int)Math.Round(width / scale));
+        var h = Math.Max(1, (int)Math.Round(height / scale));
+        return (w, h, Math.Clamp((int)Math.Round(hotX / scale), 0, w - 1), Math.Clamp((int)Math.Round(hotY / scale), 0, h - 1));
     }
 
     /// <summary>
@@ -89,6 +127,13 @@ internal sealed class RemoteCursorCache : IDisposable
         }
 
         _disposed = true;
+        ClearCursors();
+        _hiddenCursor?.Dispose();
+        _hiddenCursor = null;
+    }
+
+    private void ClearCursors()
+    {
         foreach (var entry in _cursors.Values)
         {
             entry.Cursor.Dispose();
@@ -97,11 +142,9 @@ internal sealed class RemoteCursorCache : IDisposable
 
         _cursors.Clear();
         _insertionOrder.Clear();
-        _hiddenCursor?.Dispose();
-        _hiddenCursor = null;
     }
 
-    private (Cursor Cursor, WriteableBitmap Bitmap)? BuildCursor(uint cursorId, int width, int height, int hotX, int hotY)
+    private (Cursor Cursor, Bitmap Bitmap)? BuildCursor(uint cursorId, int width, int height, int hotX, int hotY)
     {
         if (width <= 0 || height <= 0)
         {
@@ -127,12 +170,17 @@ internal sealed class RemoteCursorCache : IDisposable
                 return null;
             }
 
-            // Hotspots are in remote desktop pixels, which map 1:1 to the bitmap pixels Avalonia
-            // expects for PixelPoint, so no render-scaling conversion belongs here.
-            var hotspot = new PixelPoint(
-                Math.Clamp(hotX, 0, width - 1),
-                Math.Clamp(hotY, 0, height - 1));
-            return (new Cursor(bitmap, hotspot), bitmap);
+            // Hotspots are in remote desktop pixels, i.e. bitmap pixels; ScaleShape keeps them on the same spot
+            // of the shrunk image when Scale > 1 (macOS, see Scale).
+            var (w, h, hx, hy) = ScaleShape(width, height, hotX, hotY, _scale);
+            Bitmap image = bitmap;
+            if (w != width || h != height)
+            {
+                image = bitmap.CreateScaledBitmap(new PixelSize(w, h), BitmapInterpolationMode.HighQuality);
+                bitmap.Dispose();
+            }
+
+            return (new Cursor(image, new PixelPoint(hx, hy)), image);
         }
         catch (Exception ex)
         {
