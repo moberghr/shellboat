@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shellboat.Core: domain records + interfaces. NO package or project references, ever (§2.1). -->
+
+</Project>

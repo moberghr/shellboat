@@ -1,0 +1,344 @@
+using System;
+using System.Diagnostics;
+using System.Threading;
+using Avalonia;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Shellboat.Rdp;
+
+namespace Shellboat.App.Rdp;
+
+internal sealed class ManagedFramePresenter : IDisposable
+{
+    private readonly object _frameLock = new();
+    private readonly string _sessionTitle;
+    private readonly Action<WriteableBitmap?> _setScreen;
+    private readonly Action _requestRedraw;
+    private readonly PresentDelegate _present;
+    private int _disposed;
+    private int _suspended;
+    private WriteableBitmap? _screen;
+    private int _presentQueued;
+    private int _pendingCount;
+    private double _renderScaling = 1.0;
+    private long _lastPerfLogTicks = Stopwatch.GetTimestamp();
+    private long _framesReceived;
+    private long _framesPresented;
+    private long _framesDropped;
+    private long _bytesCopied;
+    private double _copyTotalMs;
+    private double _copyMaxMs;
+    private double _queueDelayTotalMs;
+    private double _queueDelayMaxMs;
+    private long _lastInputTicks;
+    private int _inputWaitingForFrame;
+    private double _lastInputToFrameMs;
+    private double _inputToFrameMaxMs;
+    private long _lastReceivedTicks;
+
+    public delegate FramePresentResult PresentDelegate(IntPtr dest, int destStride, int destWidth, int destHeight);
+
+    public ManagedFramePresenter(string sessionTitle, int width, int height, Action<WriteableBitmap?> setScreen, Action requestRedraw, PresentDelegate present, double renderScaling = 1.0, bool initializeBitmap = true)
+    {
+        _sessionTitle = sessionTitle;
+        _setScreen = setScreen;
+        _requestRedraw = requestRedraw;
+        _present = present;
+        _renderScaling = renderScaling > 0 ? renderScaling : 1.0;
+        if (initializeBitmap)
+        {
+            _screen = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+            _setScreen(_screen);
+        }
+    }
+
+    public void UpdateRenderScaling(double scaling)
+    {
+        if (scaling > 0)
+        {
+            _renderScaling = scaling;
+        }
+    }
+
+    public void EnqueueFrame(int width, int height)
+    {
+        if (IsDisposed || IsSuspended || width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        bool shouldPost;
+        lock (_frameLock)
+        {
+            _framesReceived++;
+            // Track the latest received frame dims so the present loop can detect resize even
+            // before the native call returns the actual GDI dims. The native present call is
+            // authoritative, but this avoids a needless copy into a too-small bitmap.
+            _pendingCount++;
+            _lastReceivedTicks = Stopwatch.GetTimestamp();
+            shouldPost = Interlocked.Exchange(ref _presentQueued, 1) == 0;
+        }
+
+        if (shouldPost)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(Present);
+        }
+    }
+
+    public void MarkInputSent()
+    {
+        Interlocked.Exchange(ref _lastInputTicks, Stopwatch.GetTimestamp());
+        Interlocked.Exchange(ref _inputWaitingForFrame, 1);
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        lock (_frameLock)
+        {
+            _pendingCount = 0;
+        }
+        Interlocked.Exchange(ref _presentQueued, 0);
+        ReleaseScreen();
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    private bool IsSuspended => Volatile.Read(ref _suspended) != 0;
+
+    public void Suspend()
+    {
+        if (IsDisposed || Interlocked.Exchange(ref _suspended, 1) != 0)
+        {
+            return;
+        }
+
+        lock (_frameLock)
+        {
+            _pendingCount = 0;
+        }
+        Interlocked.Exchange(ref _presentQueued, 0);
+        ReleaseScreen();
+    }
+
+    public void Resume()
+    {
+        if (IsDisposed || Interlocked.Exchange(ref _suspended, 0) == 0)
+        {
+            return;
+        }
+
+        // The native side has marked its current primary buffer fully dirty. Queue a present
+        // without retaining any geometry from the released managed bitmap.
+        EnqueueFrame(1, 1);
+    }
+
+    private void ReleaseScreen()
+    {
+        var screen = Interlocked.Exchange(ref _screen, null);
+        if (screen == null)
+        {
+            return;
+        }
+
+        _setScreen(null);
+        try
+        {
+            screen.Dispose();
+        }
+        catch
+        {
+            // Already gone.
+        }
+    }
+
+    private void Present()
+    {
+        if (IsDisposed || IsSuspended)
+        {
+            Interlocked.Exchange(ref _presentQueued, 0);
+            return;
+        }
+
+        int pendingSnapshot;
+        long receivedTicks;
+        lock (_frameLock)
+        {
+            pendingSnapshot = _pendingCount;
+            if (pendingSnapshot == 0)
+            {
+                Interlocked.Exchange(ref _presentQueued, 0);
+                return;
+            }
+            _pendingCount = 0;
+            receivedTicks = _lastReceivedTicks;
+            // Multiple received frames are coalesced into a single present (the native side
+            // merges their dirty rects under frame_lock). Count the intermediate frames as
+            // dropped to surface coalescing pressure.
+            if (pendingSnapshot > 1)
+            {
+                _framesDropped += pendingSnapshot - 1;
+            }
+        }
+
+        var renderTicks = Stopwatch.GetTimestamp();
+        var queueMs = ElapsedMilliseconds(receivedTicks, renderTicks);
+        long copiedBytes = 0;
+        double copyMs = 0;
+        bool presented = false;
+
+        try
+        {
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                if (IsDisposed || IsSuspended)
+                {
+                    break;
+                }
+
+                var screen = _screen;
+
+                // Bitmap was invalidated by UpdateRenderScaling or initial creation. Query native
+                // for the current framebuffer dims and create a fresh bitmap at the right size
+                // and DPI so the next attempt can copy into it.
+                if (screen == null)
+                {
+                    var query = _present(IntPtr.Zero, 0, 0, 0);
+                    if (query.FramebufferWidth <= 0 || query.FramebufferHeight <= 0)
+                    {
+                        break;
+                    }
+                    screen = new WriteableBitmap(new PixelSize(query.FramebufferWidth, query.FramebufferHeight), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+                    _screen = screen;
+                    _setScreen(screen);
+                }
+
+                PixelSize screenDims = screen.PixelSize;
+                ILockedFramebuffer locked;
+                try
+                {
+                    locked = screen.Lock();
+                }
+                catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+                {
+                    break;
+                }
+
+                bool recreate = false;
+                int newFbW = 0;
+                int newFbH = 0;
+
+                try
+                {
+                    long presentStart = Stopwatch.GetTimestamp();
+                    var result = _present(locked.Address, locked.RowBytes, screenDims.Width, screenDims.Height);
+                    long presentEnd = Stopwatch.GetTimestamp();
+                    int fbW = result.FramebufferWidth;
+                    int fbH = result.FramebufferHeight;
+
+                    if (!result.Presented)
+                    {
+                        if (fbW > 0 && fbH > 0 && (fbW != screenDims.Width || fbH != screenDims.Height))
+                        {
+                            recreate = true;
+                            newFbW = fbW;
+                            newFbH = fbH;
+                        }
+                    }
+                    else
+                    {
+                        copyMs = ElapsedMilliseconds(presentStart, presentEnd);
+                        copiedBytes = (long)result.DirtyWidth * result.DirtyHeight * 4;
+                        presented = true;
+                    }
+                }
+                finally
+                {
+                    locked.Dispose();
+                }
+
+                if (presented)
+                {
+                    break;
+                }
+
+                if (recreate && !IsDisposed && !IsSuspended)
+                {
+                    Interlocked.Exchange(ref _screen, null);
+                    try
+        {
+            screen.Dispose();
+        }
+        catch
+        {
+            // Already gone.
+        }
+                    var fresh = new WriteableBitmap(new PixelSize(newFbW, newFbH), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+                    _screen = fresh;
+                    _setScreen(fresh);
+                    continue;
+                }
+
+                break;
+            }
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+        {
+            presented = false;
+        }
+
+        if (presented)
+        {
+            _framesPresented++;
+            _bytesCopied += copiedBytes;
+            _copyTotalMs += copyMs;
+            if (copyMs > _copyMaxMs)
+            {
+                _copyMaxMs = copyMs;
+            }
+            _queueDelayTotalMs += queueMs;
+            if (queueMs > _queueDelayMaxMs)
+            {
+                _queueDelayMaxMs = queueMs;
+            }
+
+            if (Interlocked.Exchange(ref _inputWaitingForFrame, 0) == 1)
+            {
+                var inputTicks = Interlocked.Read(ref _lastInputTicks);
+                if (inputTicks != 0)
+                {
+                    _lastInputToFrameMs = ElapsedMilliseconds(inputTicks, renderTicks);
+                    if (_lastInputToFrameMs > _inputToFrameMaxMs)
+                    {
+                        _inputToFrameMaxMs = _lastInputToFrameMs;
+                    }
+                }
+            }
+
+            _requestRedraw();
+        }
+
+        bool morePending;
+        lock (_frameLock)
+        {
+            morePending = _pendingCount > 0;
+            if (!morePending)
+            {
+                Interlocked.Exchange(ref _presentQueued, 0);
+            }
+        }
+
+        if (morePending && !IsDisposed && !IsSuspended)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(Present);
+        }
+    }
+
+    private static double ElapsedMilliseconds(long startTicks, long endTicks)
+    {
+        return (endTicks - startTicks) * 1000.0 / Stopwatch.Frequency;
+    }
+}

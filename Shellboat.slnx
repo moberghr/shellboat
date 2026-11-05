@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Shellboat.App/Shellboat.App.csproj" />
+    <Project Path="src/Shellboat.Core/Shellboat.Core.csproj" />
+    <Project Path="src/Shellboat.Desktop/Shellboat.Desktop.csproj" />
+    <Project Path="src/Shellboat.Persistence/Shellboat.Persistence.csproj" />
+    <Project Path="src/Shellboat.Rdp/Shellboat.Rdp.csproj" />
+    <Project Path="src/Shellboat.Ssh/Shellboat.Ssh.csproj" />
+    <Project Path="src/Shellboat.Terminal/Shellboat.Terminal.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Shellboat.App.Tests/Shellboat.App.Tests.csproj" />
+    <Project Path="tests/Shellboat.Persistence.Tests/Shellboat.Persistence.Tests.csproj" />
+    <Project Path="tests/Shellboat.Rdp.Tests/Shellboat.Rdp.Tests.csproj" />
+    <Project Path="tests/Shellboat.Ssh.Tests/Shellboat.Ssh.Tests.csproj" />
+    <Project Path="tests/Shellboat.Terminal.Tests/Shellboat.Terminal.Tests.csproj" />
+  </Folder>
+</Solution>

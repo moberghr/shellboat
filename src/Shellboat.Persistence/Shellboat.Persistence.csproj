@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shellboat.Persistence: connection tree JSON, trust store, OS keychain secret stores, KeePass import. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shellboat.Core\Shellboat.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shellboat.Persistence.Tests" />
+  </ItemGroup>
+
+</Project>

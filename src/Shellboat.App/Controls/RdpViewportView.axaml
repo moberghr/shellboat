@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shellboat.App.ViewModels"
+             x:Class="Shellboat.App.Controls.RdpViewportView"
+             x:DataType="vm:RdpTabViewModel">
+  <!-- The remote resolution is measured from this Grid, which has its size even before the session is up
+       (the remote DPI is locked at connect time) — same reasoning as RDPilot's viewport. -->
+  <Grid Name="ViewportHost" Background="#0F1115">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <!-- FreeRDP never draws the pointer into the framebuffer; the remote cursor arrives out of band. -->
+      <Image Name="RdpImage"
+             Source="{Binding Screen}"
+             Stretch="Fill"
+             Width="{Binding DisplayWidth}"
+             Height="{Binding DisplayHeight}"
+             Cursor="{Binding RemoteCursor}"
+             HorizontalAlignment="Left" VerticalAlignment="Top"
+             Focusable="True"/>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

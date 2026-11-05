@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shellboat.Ssh: SSH.NET sessions (interactive shell with PTY), host-key verification. No UI. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shellboat.Core\Shellboat.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shellboat.Ssh.Tests" />
+  </ItemGroup>
+
+</Project>

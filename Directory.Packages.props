@@ -1,0 +1,34 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Label="Build">
+    <PackageVersion Include="MinVer" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Protocols">
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+    <!-- Rune type used by the vendored XtermSharp engine (vendor/XtermSharp); the version it was written against. -->
+    <PackageVersion Include="NStack.Core" Version="0.12.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="UI (Avalonia)">
+    <PackageVersion Include="Avalonia" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.0" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Xunit.SkippableFact" Version="1.5.61" />
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.0" />
+  </ItemGroup>
+
+</Project>

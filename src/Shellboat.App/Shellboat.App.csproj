@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- UI library (App.axaml, Views, ViewModels, Controls). The entry point lives in Shellboat.Desktop so this
+       stays referenceable from tests. -->
+  <PropertyGroup>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shellboat.Core\Shellboat.Core.csproj" />
+    <ProjectReference Include="..\Shellboat.Persistence\Shellboat.Persistence.csproj" />
+    <ProjectReference Include="..\Shellboat.Terminal\Shellboat.Terminal.csproj" />
+    <ProjectReference Include="..\Shellboat.Ssh\Shellboat.Ssh.csproj" />
+    <ProjectReference Include="..\Shellboat.Rdp\Shellboat.Rdp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shellboat.App.Tests" />
+  </ItemGroup>
+
+</Project>

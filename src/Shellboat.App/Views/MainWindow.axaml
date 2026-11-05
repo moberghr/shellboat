@@ -1,0 +1,110 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Shellboat.App.ViewModels"
+        xmlns:c="using:Shellboat.App.Controls"
+        x:Class="Shellboat.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Shellboat"
+        Width="1280" Height="800" MinWidth="720" MinHeight="420"
+        Background="{DynamicResource Bg.Window}">
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+N" Command="{Binding NewConnectionCommand}"/>
+  </Window.KeyBindings>
+
+  <DockPanel>
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10,3">
+      <TextBlock Text="{Binding StatusText}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
+    </Border>
+
+    <Grid ColumnDefinitions="280,4,*">
+      <!-- ============ Left: connection tree ============ -->
+      <DockPanel Grid.Column="0" Background="{DynamicResource Bg.Chrome}">
+        <StackPanel DockPanel.Dock="Top" Margin="8,8,8,4" Spacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="2">
+            <Button Classes="Toolbar" Content="+ Connection" Command="{Binding NewConnectionCommand}" ToolTip.Tip="New connection (Ctrl+N)"/>
+            <Button Classes="Toolbar" Content="+ Folder" Command="{Binding NewFolderCommand}"/>
+            <Button Classes="Toolbar" Content="Import ▾">
+              <Button.Flyout>
+                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                  <MenuItem Header="From Royal TSX / Royal TS (.rtsz)…" Command="{Binding ImportRoyalCommand}"/>
+                  <MenuItem Header="From KeePass (.kdbx)…" Command="{Binding ImportKeePassCommand}"/>
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
+          </StackPanel>
+          <TextBox Text="{Binding Tree.Filter}" PlaceholderText="Filter connections…"/>
+        </StackPanel>
+
+        <TreeView Name="ConnectionTree"
+                  ItemsSource="{Binding Tree.Roots}"
+                  SelectedItem="{Binding Tree.Selected}"
+                  Background="Transparent">
+          <TreeView.ItemContainerTheme>
+            <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}" x:DataType="vm:TreeNodeViewModel">
+              <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+            </ControlTheme>
+          </TreeView.ItemContainerTheme>
+          <TreeView.ItemTemplate>
+            <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:TreeNodeViewModel">
+              <Border Name="Row" Background="Transparent" Padding="0,2" CornerRadius="4"
+                      Classes.drop="{Binding IsDropTarget}">
+                <Border.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="Connect" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ConnectCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Edit / Rename" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).EditCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Duplicate" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DuplicateCommand}" CommandParameter="{Binding}"/>
+                    <Separator/>
+                    <MenuItem Header="New folder here" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NewFolderCommand}"/>
+                    <MenuItem Header="New connection here" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NewConnectionCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Delete" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DeleteCommand}" CommandParameter="{Binding}"/>
+                  </ContextMenu>
+                </Border.ContextMenu>
+                <Border.Styles>
+                  <Style Selector="Border.drop">
+                    <Setter Property="Background" Value="{DynamicResource Bg.Select}"/>
+                  </Style>
+                </Border.Styles>
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <PathIcon Width="14" Height="14" Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                            Foreground="{DynamicResource Text.Muted}"/>
+                  <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding Subtitle}" Classes="Caption" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Border>
+            </TreeDataTemplate>
+          </TreeView.ItemTemplate>
+        </TreeView>
+      </DockPanel>
+
+      <GridSplitter Grid.Column="1" Background="{DynamicResource Border}" ResizeDirection="Columns"/>
+
+      <!-- ============ Right: session tabs ============ -->
+      <Grid Grid.Column="2">
+        <TextBlock IsVisible="{Binding !HasTabs}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   TextAlignment="Center" Classes="Caption"
+                   Text="Double-click a connection to open it.&#10;Ctrl+N adds one; Import pulls them from Royal TSX or KeePass."/>
+
+        <TabControl Name="SessionTabs" IsVisible="{Binding HasTabs}" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}" Padding="0">
+          <TabControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SessionTabViewModel">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Ellipse Width="7" Height="7" Fill="{DynamicResource Ok.Green}" IsVisible="{Binding IsConnected}"/>
+                <Ellipse Width="7" Height="7" Fill="{DynamicResource Error.Red}" IsVisible="{Binding !IsConnected}"/>
+                <TextBlock Text="{Binding Title}" FontSize="13" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                <Button Content="✕" Padding="4,0" FontSize="11" Background="Transparent" Command="{Binding CloseCommand}" ToolTip.Tip="Close"/>
+              </StackPanel>
+            </DataTemplate>
+          </TabControl.ItemTemplate>
+          <TabControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:SessionTabViewModel">
+              <c:SessionHost/>
+            </DataTemplate>
+          </TabControl.ContentTemplate>
+        </TabControl>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</Window>

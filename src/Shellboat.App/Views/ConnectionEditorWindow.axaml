@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Shellboat.App.ViewModels"
+        x:Class="Shellboat.App.Views.ConnectionEditorWindow"
+        x:DataType="vm:ConnectionEditorViewModel"
+        Title="{Binding Title}"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Bg.Chrome}">
+  <StackPanel Margin="18" Spacing="10">
+    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+      <TextBlock Grid.Row="0" Text="Protocol" VerticalAlignment="Center"/>
+      <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Kinds}" SelectedIndex="{Binding KindIndex}" Width="140"/>
+
+      <TextBlock Grid.Row="1" Text="Name" VerticalAlignment="Center"/>
+      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Name}" PlaceholderText="(defaults to host)"/>
+
+      <TextBlock Grid.Row="2" Text="Host / port" VerticalAlignment="Center"/>
+      <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,8,90">
+        <TextBox Name="HostBox" Text="{Binding Host}" PlaceholderText="server.example.com"/>
+        <TextBox Grid.Column="2" Text="{Binding Port}" PlaceholderText="{Binding PortWatermark}"/>
+      </Grid>
+
+      <TextBlock Grid.Row="3" Text="User" VerticalAlignment="Center"/>
+      <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding UserName}"/>
+
+      <TextBlock Grid.Row="4" Text="Domain" VerticalAlignment="Center" IsVisible="{Binding IsRdp}"/>
+      <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Domain}" IsVisible="{Binding IsRdp}" PlaceholderText="(optional)"/>
+    </Grid>
+
+    <!-- SSH auth -->
+    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" IsVisible="{Binding IsSsh}">
+      <TextBlock Text="Authentication" VerticalAlignment="Center"/>
+      <ComboBox Grid.Column="1" ItemsSource="{Binding AuthMethods}" SelectedIndex="{Binding AuthIndex}" Width="160"/>
+
+      <TextBlock Grid.Row="1" Text="Private key" VerticalAlignment="Center" IsVisible="{Binding ShowKey}"/>
+      <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,6,Auto" IsVisible="{Binding ShowKey}">
+        <TextBox Text="{Binding PrivateKeyPath}" PlaceholderText="~/.ssh/id_ed25519"/>
+        <Button Grid.Column="2" Content="Browse…" Click="OnBrowseKey"/>
+      </Grid>
+
+      <TextBlock Grid.Row="2" Text="Passphrase" VerticalAlignment="Center" IsVisible="{Binding ShowKey}"/>
+      <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding KeyPassphrase}" PasswordChar="•" PlaceholderText="{Binding SecretWatermark}" IsVisible="{Binding ShowKey}"/>
+    </Grid>
+
+    <Grid ColumnDefinitions="120,*" IsVisible="{Binding ShowPassword}">
+      <TextBlock Text="Password" VerticalAlignment="Center"/>
+      <TextBox Grid.Column="1" Text="{Binding Password}" PasswordChar="•" PlaceholderText="{Binding SecretWatermark}"/>
+    </Grid>
+
+    <CheckBox Content="Save secret in the system keychain" IsChecked="{Binding RememberSecret}" IsEnabled="{Binding CanRememberSecrets}" Margin="120,0,0,0"/>
+
+    <!-- RDP display -->
+    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" IsVisible="{Binding IsRdp}">
+      <TextBlock Text="Resolution" VerticalAlignment="Center"/>
+      <ComboBox Grid.Column="1" ItemsSource="{Binding ResolutionModes}" SelectedIndex="{Binding ResolutionIndex}" Width="200"/>
+      <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsFixedResolution}">
+        <TextBox Text="{Binding Width}" Width="80"/>
+        <TextBlock Text="×" VerticalAlignment="Center"/>
+        <TextBox Text="{Binding Height}" Width="80"/>
+      </StackPanel>
+      <TextBlock Grid.Row="2" Text="Colour depth" VerticalAlignment="Center"/>
+      <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ColorDepths}" SelectedIndex="{Binding ColorDepthIndex}" Width="120"/>
+    </Grid>
+
+    <Grid ColumnDefinitions="120,*">
+      <TextBlock Text="Notes" VerticalAlignment="Top" Margin="0,6,0,0"/>
+      <TextBox Grid.Column="1" Text="{Binding Notes}" AcceptsReturn="True" Height="60" TextWrapping="Wrap"/>
+    </Grid>
+
+    <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Error.Red}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap"/>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" IsCancel="True"/>
+      <Button Content="Save" Click="OnSave" IsDefault="True" Classes="accent"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

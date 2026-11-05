@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Shellboat (dev profile)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "SHELLBOAT_PROFILE": "dev"
+      }
+    }
+  }
+}

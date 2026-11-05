@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shellboat.Rdp: P/Invoke over the vendored FreeRDP wrapper (native/freerdp-wrapper, from RDPilot) and the
+       per-session runtime. No Avalonia: the frame presenter and viewport live in Shellboat.App/Rdp. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shellboat.Core\Shellboat.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The native wrapper built by build/native.sh, copied next to the app when present. A missing library is
+       reported at connect time (WRAPPER_NATIVE_LOAD_FAILED), not at build time, so SSH-only dev still works. -->
+  <ItemGroup>
+    <None Include="..\..\native\out\$(NETCoreSdkRuntimeIdentifier)\*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shellboat.Rdp.Tests" />
+    <InternalsVisibleTo Include="Shellboat.App" />
+    <InternalsVisibleTo Include="Shellboat.App.Tests" />
+  </ItemGroup>
+
+</Project>

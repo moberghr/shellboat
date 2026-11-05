@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+artifacts/
+dist/
+
+# Native wrapper build output (build/native.sh)
+native/build/
+native/out/
+runtimes/
+
+# Rider / VS
+.idea/
+.vs/
+
+# OS
+.DS_Store
+.mtk/
+TestResults/
+build/.test-sshd/

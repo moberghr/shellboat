@@ -1,0 +1,284 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Shellboat.App.Connections;
+using Shellboat.App.Services;
+using Shellboat.Core.Connections;
+using Shellboat.Core.Import;
+using Shellboat.Core.Secrets;
+using Shellboat.Persistence.Import;
+
+namespace Shellboat.App.ViewModels;
+
+/// <summary>
+/// The shell: connection tree on the left, session tabs on the right. Keep this a coordinator — tree rules
+/// live in <see cref="ConnectionTreeViewModel"/>/<see cref="ConnectionTreeEditor"/>, session logic in the tab
+/// view models.
+/// </summary>
+public sealed partial class MainWindowViewModel : ObservableObject
+{
+    private readonly ISecretStore _secrets;
+    private readonly IDialogService _dialogs;
+    private readonly CredentialResolver _credentials;
+    private readonly ShellChannelFactory _shellFactory;
+    private readonly ICredentialImporter _importer;
+    private readonly Func<string, CancellationToken, Task<RoyalImportResult>> _royalReader;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTabs))]
+    private SessionTabViewModel? _selectedTab;
+
+    [ObservableProperty]
+    private string _statusText = "";
+
+    public MainWindowViewModel(
+        ConnectionTreeViewModel tree,
+        ISecretStore secrets,
+        IDialogService dialogs,
+        ShellChannelFactory shellFactory,
+        ICredentialImporter importer,
+        Func<string, CancellationToken, Task<RoyalImportResult>>? royalReader = null)
+    {
+        _royalReader = royalReader ?? RoyalTsImporter.ReadFileAsync;
+        Tree = tree;
+        _secrets = secrets;
+        _dialogs = dialogs;
+        _shellFactory = shellFactory;
+        _importer = importer;
+        _credentials = new CredentialResolver(secrets, dialogs);
+        Tabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTabs));
+        if (!secrets.CanStore)
+        {
+            StatusText = $"No system keychain — passwords will be asked for on connect and not saved. ({secrets.UnavailableReason})";
+        }
+    }
+
+    public ConnectionTreeViewModel Tree { get; }
+
+    public ObservableCollection<SessionTabViewModel> Tabs { get; } = [];
+
+    public bool HasTabs => Tabs.Count > 0;
+
+    [RelayCommand]
+    private async Task ConnectAsync(TreeNodeViewModel? node)
+    {
+        if ((node ?? Tree.Selected) is not ConnectionNodeViewModel c)
+        {
+            return;
+        }
+
+        SessionTabViewModel tab = c.Entry.Kind == ConnectionKind.Rdp
+            ? new RdpTabViewModel(c.Entry, _credentials, _dialogs)
+            : new TerminalTabViewModel(c.Entry, _shellFactory, _credentials, _dialogs);
+        tab.CloseRequested += async (_, _) => await CloseTabAsync(tab);
+        Tabs.Add(tab);
+        SelectedTab = tab;
+        await tab.ConnectAsync();
+    }
+
+    [RelayCommand]
+    private async Task CloseTabAsync(SessionTabViewModel? tab)
+    {
+        if (tab is null || !Tabs.Contains(tab))
+        {
+            return;
+        }
+
+        var index = Tabs.IndexOf(tab);
+        Tabs.Remove(tab);
+        if (ReferenceEquals(SelectedTab, tab) || SelectedTab is null)
+        {
+            SelectedTab = Tabs.Count == 0 ? null : Tabs[Math.Min(index, Tabs.Count - 1)];
+        }
+
+        await tab.DisposeAsync();
+    }
+
+    [RelayCommand]
+    private async Task NewConnectionAsync()
+    {
+        var editor = new ConnectionEditorViewModel(null, Tree.TargetFolderId, _secrets.CanStore, hasSavedSecret: false);
+        await EditAsync(editor);
+    }
+
+    [RelayCommand]
+    private async Task EditAsync(TreeNodeViewModel? node)
+    {
+        node ??= Tree.Selected;
+        if (node is FolderNodeViewModel folder)
+        {
+            await RenameFolderAsync(folder);
+            return;
+        }
+
+        if (node is not ConnectionNodeViewModel c)
+        {
+            return;
+        }
+
+        var purpose = c.Entry.Ssh?.Auth == SshAuthMethod.PrivateKey ? SecretPurpose.KeyPassphrase : SecretPurpose.Password;
+        var saved = await _credentials.GetSavedAsync(c.Entry, purpose, CancellationToken.None) is not null;
+        await EditAsync(new ConnectionEditorViewModel(c.Entry, null, _secrets.CanStore, saved));
+    }
+
+    [RelayCommand]
+    private async Task DuplicateAsync(TreeNodeViewModel? node)
+    {
+        if ((node ?? Tree.Selected) is not ConnectionNodeViewModel c)
+        {
+            return;
+        }
+
+        await Tree.UpsertAsync(c.Entry with { Id = Guid.NewGuid(), Name = c.Entry.Name + " (copy)" });
+    }
+
+    [RelayCommand]
+    private async Task NewFolderAsync()
+    {
+        var name = await _dialogs.PromptTextAsync("New folder", "Folder name", "");
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            await Tree.AddFolderAsync(name.Trim(), Tree.TargetFolderId);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAsync(TreeNodeViewModel? node)
+    {
+        node ??= Tree.Selected;
+        switch (node)
+        {
+            case ConnectionNodeViewModel c when await _dialogs.ConfirmAsync("Delete connection", $"Delete \"{c.Title}\" and its saved password?", "Delete"):
+                await Tree.DeleteConnectionAsync(c.Id);
+                break;
+            case FolderNodeViewModel f when await _dialogs.ConfirmAsync("Delete folder", $"Delete folder \"{f.Title}\" and everything in it?", "Delete"):
+                await Tree.DeleteFolderAsync(f.Id);
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportKeePassAsync()
+    {
+        var import = new KeePassImportViewModel(_importer, _secrets.CanStore);
+        await _dialogs.ShowKeePassImportAsync(import);
+        if (import.Accepted is not { Count: > 0 } rows)
+        {
+            return;
+        }
+
+        var (doc, root) = ConnectionTreeEditor.EnsureFolderPath(Tree.Document, null, ["Imported from KeePass"]);
+        var saved = 0;
+        foreach (var row in rows)
+        {
+            (doc, var folderId) = ConnectionTreeEditor.EnsureFolderPath(doc, root, row.Entry.GroupPath);
+            var entry = row.Preview with { FolderId = folderId };
+            doc = ConnectionTreeEditor.Upsert(doc, entry);
+            if (_secrets.CanStore && !string.IsNullOrEmpty(row.Entry.Password))
+            {
+                try
+                {
+                    await _secrets.SetAsync(entry.Id, SecretPurpose.Password, row.Entry.Password, CancellationToken.None);
+                    saved++;
+                }
+                catch (Exception)
+                {
+                    // Counted below: the connection imports, its password is asked for on connect.
+                }
+            }
+        }
+
+        await Tree.ApplyAsync(doc, root);
+        StatusText = $"Imported {rows.Count} connection(s); {saved} password(s) saved to the keychain.";
+    }
+
+    [RelayCommand]
+    private async Task ImportRoyalAsync()
+    {
+        var path = await _dialogs.PickFileAsync("Import Royal TS / Royal TSX document", "Royal document", ["*.rtsz", "*.rtsx"]);
+        if (path is null)
+        {
+            return;
+        }
+
+        RoyalImportResult result;
+        try
+        {
+            result = await _royalReader(path, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is CredentialImportException or IOException or UnauthorizedAccessException)
+        {
+            await _dialogs.ShowMessageAsync("Import failed", ex.Message);
+            return;
+        }
+
+        var (doc, root) = ConnectionTreeEditor.EnsureFolderPath(Tree.Document, null, ["Imported from Royal TSX"]);
+        var (merged, added, updated) = ConnectionTreeEditor.Merge(doc, result.Tree, root);
+        await Tree.ApplyAsync(merged, root);
+
+        var notes = new List<string> { $"{added} new, {updated} updated connection(s)." };
+        if (result.EncryptedPasswordsNotImported > 0)
+        {
+            notes.Add($"{result.EncryptedPasswordsNotImported} saved password(s) were not imported — Royal encrypts them. You'll be asked on first connect (tick \"save\"), or import them from KeePass.");
+        }
+
+        if (result.SkippedUnsupported > 0)
+        {
+            notes.Add($"{result.SkippedUnsupported} connection(s) of a type Shellboat doesn't support yet (telnet, serial, VNC, web…) were skipped.");
+        }
+
+        if (result.SkippedTemplatesAndTrash > 0)
+        {
+            notes.Add($"{result.SkippedTemplatesAndTrash} template(s) / trashed item(s) were skipped.");
+        }
+
+        StatusText = notes[0];
+        await _dialogs.ShowMessageAsync("Royal TSX import", string.Join("\n\n", notes));
+    }
+
+    public Task MoveAsync(TreeNodeViewModel dragged, FolderNodeViewModel? target) => dragged switch
+    {
+        ConnectionNodeViewModel c => Tree.MoveConnectionAsync(c.Id, target?.Id),
+        FolderNodeViewModel f => Tree.MoveFolderAsync(f.Id, target?.Id),
+        _ => Task.CompletedTask,
+    };
+
+    private async Task RenameFolderAsync(FolderNodeViewModel folder)
+    {
+        var name = await _dialogs.PromptTextAsync("Rename folder", "Folder name", folder.Title);
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            await Tree.RenameFolderAsync(folder.Id, name.Trim());
+        }
+    }
+
+    private async Task EditAsync(ConnectionEditorViewModel editor)
+    {
+        if (!await _dialogs.EditConnectionAsync(editor) || editor.TryBuild() is not { } entry)
+        {
+            return;
+        }
+
+        await Tree.UpsertAsync(entry);
+        await SaveSecretsAsync(editor, entry);
+    }
+
+    private async Task SaveSecretsAsync(ConnectionEditorViewModel editor, ConnectionEntry entry)
+    {
+        var secret = editor.ShowKey ? editor.KeyPassphrase : editor.Password;
+        var purpose = editor.ShowKey ? SecretPurpose.KeyPassphrase : SecretPurpose.Password;
+        if (string.IsNullOrEmpty(secret) || !editor.RememberSecret || !_secrets.CanStore)
+        {
+            return;
+        }
+
+        try
+        {
+            await _secrets.SetAsync(entry.Id, purpose, secret, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowMessageAsync("Not saved", $"The connection was saved, but the secret could not be stored in the keychain: {ex.Message}");
+        }
+    }
+}

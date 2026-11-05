@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Shellboat.App.ViewModels"
+        x:Class="Shellboat.App.Views.KeePassImportWindow"
+        x:DataType="vm:KeePassImportViewModel"
+        Title="Import from KeePass"
+        Width="760" Height="560"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Bg.Chrome}">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Top" Spacing="8">
+      <TextBlock Classes="Caption" TextWrapping="Wrap"
+                 Text="Reads the database with keepassxc-cli (install KeePassXC). The master password goes to keepassxc-cli only and is not stored. Imported passwords are saved to the system keychain."/>
+      <Grid ColumnDefinitions="110,*,6,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
+        <TextBlock Text="Database" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="1" Text="{Binding DatabasePath}" PlaceholderText="~/Passwords.kdbx"/>
+        <Button Grid.Column="3" Content="Browse…" Click="OnBrowseDatabase"/>
+
+        <TextBlock Grid.Row="1" Text="Key file" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding KeyFilePath}" PlaceholderText="(optional)"/>
+        <Button Grid.Row="1" Grid.Column="3" Content="Browse…" Click="OnBrowseKeyFile"/>
+
+        <TextBlock Grid.Row="2" Text="Master password" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding MasterPassword}" PasswordChar="•"/>
+        <Button Grid.Row="2" Grid.Column="3" Content="Unlock" Command="{Binding UnlockCommand}" IsDefault="True"/>
+      </Grid>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+      <TextBlock Classes="Caption" Foreground="{DynamicResource Warn.Amber}" IsVisible="{Binding !CanStoreSecrets}"
+                 Text="No system keychain is available: connections import without their passwords."/>
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+      <Button Content="Cancel" Click="OnCancel" IsCancel="True"/>
+      <Button Content="Import selected" Click="OnImport" Classes="accent"/>
+    </StackPanel>
+
+    <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,8,0,0">
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ImportRowViewModel">
+              <Grid ColumnDefinitions="30,50,200,*,160" Margin="6,2">
+                <CheckBox IsChecked="{Binding IsSelected}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Kind}" VerticalAlignment="Center" Classes="Caption"/>
+                <TextBlock Grid.Column="2" Text="{Binding Entry.Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Column="3" Text="{Binding Target}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Column="4" Text="{Binding Group}" VerticalAlignment="Center" Classes="Caption" TextTrimming="CharacterEllipsis"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+  </DockPanel>
+</Window>

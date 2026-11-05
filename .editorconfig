@@ -1,0 +1,9 @@
+# Shellboat — formatting scope.
+#
+# Vendored third-party sources (XtermSharp under vendor/) are re-synced from upstream, not authored here;
+# `generated_code = true` keeps `dotnet format` and the analyzers from rewriting them.
+[vendor/**.cs]
+generated_code = true
+
+[*]
+end_of_line = lf

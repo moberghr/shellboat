@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shellboat.Terminal: UI-agnostic xterm emulation. The engine is vendored XtermSharp (vendor/XtermSharp,
+       MIT), compiled in here; Shellboat code wraps it. No Avalonia, no SSH. -->
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Implicit usings bring in System.Text, whose Rune collides with NStack's System.Rune used by the
+         vendored engine. Shellboat files in this project spell out their usings instead. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS0618;CS0162;CS0168;CS0219;CS0414;CS0649;CS8632;CS0108;CS0169</NoWarn>
+  </PropertyGroup>
+
+  <!-- Vendored code is upstream's, not ours: no nullable analysis or warnings on it. -->
+  <ItemGroup>
+    <Compile Include="..\..\vendor\XtermSharp\**\*.cs" Link="Vendor\XtermSharp\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NStack.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shellboat.Terminal.Tests" />
+  </ItemGroup>
+
+</Project>

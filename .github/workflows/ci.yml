@@ -1,0 +1,53 @@
+# Build and test on every PR and push to main. The Linux leg also builds the FreeRDP wrapper and runs the
+# live SSH suite against build/test-sshd.sh, so the protocol tests actually run somewhere (a skip is not a pass).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: FreeRDP + wrapper (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config freerdp3-dev
+          ./build/native.sh
+
+      - name: FreeRDP + wrapper (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake pkgconf freerdp
+          ./build/native.sh
+
+      - name: Test sshd (Linux)
+        if: runner.os == 'Linux'
+        run: ./build/test-sshd.sh
+
+      - run: dotnet build
+      - run: dotnet test --no-build
