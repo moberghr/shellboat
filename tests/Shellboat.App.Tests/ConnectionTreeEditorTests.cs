@@ -7,7 +7,12 @@ public class ConnectionTreeEditorTests
 {
     private static ConnectionEntry Ssh(string name, Guid? folder = null) => new()
     {
-        Id = Guid.NewGuid(), Name = name, FolderId = folder, Kind = ConnectionKind.Ssh, Host = name + ".example", UserName = "u",
+        Id = Guid.NewGuid(),
+        Name = name,
+        FolderId = folder,
+        Kind = ConnectionKind.Ssh,
+        Host = name + ".example",
+        UserName = "u",
     };
 
     [Fact]

@@ -196,7 +196,12 @@ public sealed class SftpContextMenuTests : IDisposable
 {
     private static readonly ConnectionEntry Entry = new()
     {
-        Id = Guid.NewGuid(), Name = "web", Kind = ConnectionKind.Ssh, Host = "web.example", UserName = "u", Ssh = new SshSettings(),
+        Id = Guid.NewGuid(),
+        Name = "web",
+        Kind = ConnectionKind.Ssh,
+        Host = "web.example",
+        UserName = "u",
+        Ssh = new SshSettings(),
     };
 
     private readonly string _downloads = Directory.CreateTempSubdirectory("shellboat-sftp-menu-").FullName;

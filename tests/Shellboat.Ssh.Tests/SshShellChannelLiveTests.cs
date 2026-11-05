@@ -11,8 +11,12 @@ public class SshShellChannelLiveTests
 {
     private static ConnectionEntry Entry(SshSettings? ssh = null) => new()
     {
-        Id = Guid.NewGuid(), Name = "test", Kind = ConnectionKind.Ssh,
-        Host = SshTestServer.Host, Port = SshTestServer.Port, UserName = SshTestServer.User,
+        Id = Guid.NewGuid(),
+        Name = "test",
+        Kind = ConnectionKind.Ssh,
+        Host = SshTestServer.Host,
+        Port = SshTestServer.Port,
+        UserName = SshTestServer.User,
         Ssh = ssh ?? new SshSettings(SshAuthMethod.Password),
     };
 

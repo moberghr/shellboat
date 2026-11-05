@@ -21,12 +21,22 @@ public class JsonConnectionStoreTests
         var folder = new Folder(Guid.NewGuid(), "Prod", null);
         var ssh = new ConnectionEntry
         {
-            Id = Guid.NewGuid(), Name = "web", FolderId = folder.Id, Kind = ConnectionKind.Ssh, Host = "web.example", Port = 2222,
-            UserName = "deploy", Ssh = new SshSettings(SshAuthMethod.PrivateKey, "~/.ssh/id_ed25519"),
+            Id = Guid.NewGuid(),
+            Name = "web",
+            FolderId = folder.Id,
+            Kind = ConnectionKind.Ssh,
+            Host = "web.example",
+            Port = 2222,
+            UserName = "deploy",
+            Ssh = new SshSettings(SshAuthMethod.PrivateKey, "~/.ssh/id_ed25519"),
         };
         var rdp = new ConnectionEntry
         {
-            Id = Guid.NewGuid(), Name = "dc", Kind = ConnectionKind.Rdp, Host = "dc.example", UserName = "admin",
+            Id = Guid.NewGuid(),
+            Name = "dc",
+            Kind = ConnectionKind.Rdp,
+            Host = "dc.example",
+            UserName = "admin",
             Rdp = new RdpSettings("CORP", RdpResolutionMode.Fixed, 1600, 900, 24),
         };
 
@@ -86,7 +96,11 @@ public class JsonConnectionStoreIconTests
         var folder = new Folder(Guid.NewGuid(), "Prod", null, 0, new NodeIcon("server", null));
         var conn = new ConnectionEntry
         {
-            Id = Guid.NewGuid(), Name = "db", Kind = ConnectionKind.Ssh, Host = "db", Icon = new NodeIcon("database", "#E3B457"),
+            Id = Guid.NewGuid(),
+            Name = "db",
+            Kind = ConnectionKind.Ssh,
+            Host = "db",
+            Icon = new NodeIcon("database", "#E3B457"),
         };
 
         await store.SaveAsync(new ConnectionTreeDocument([folder], [conn]), default);

@@ -269,13 +269,13 @@ internal sealed class ManagedFramePresenter : IDisposable
                 {
                     Interlocked.Exchange(ref _screen, null);
                     try
-        {
-            screen.Dispose();
-        }
-        catch
-        {
-            // Already gone.
-        }
+                    {
+                        screen.Dispose();
+                    }
+                    catch
+                    {
+                        // Already gone.
+                    }
                     var fresh = new WriteableBitmap(new PixelSize(newFbW, newFbH), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
                     _screen = fresh;
                     _setScreen(fresh);

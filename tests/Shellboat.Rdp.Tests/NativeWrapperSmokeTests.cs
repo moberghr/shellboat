@@ -17,8 +17,13 @@ public class NativeWrapperSmokeTests
 
         var entry = new ConnectionEntry
         {
-            Id = Guid.NewGuid(), Name = "closed", Kind = ConnectionKind.Rdp, Host = "127.0.0.1", Port = 1,
-            UserName = "nobody", Rdp = new RdpSettings(),
+            Id = Guid.NewGuid(),
+            Name = "closed",
+            Kind = ConnectionKind.Rdp,
+            Host = "127.0.0.1",
+            Port = 1,
+            UserName = "nobody",
+            Rdp = new RdpSettings(),
         };
         var done = new TaskCompletionSource<(RdpSessionStatus, RdpSessionError?)>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var runtime = new RdpSessionRuntime(entry.Host, _ => CertificateTrustDecision.Reject);

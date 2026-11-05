@@ -178,7 +178,8 @@ public sealed class TerminalEmulator
 
             var scrollOffset = buffer.YBase - buffer.YDisp;
             return new TerminalSnapshot(cols, rows, cells, buffer.X, buffer.Y,
-                !_terminal.CursorHidden && scrollOffset == 0, scrollOffset) { ViewportTop = top };
+                !_terminal.CursorHidden && scrollOffset == 0, scrollOffset)
+            { ViewportTop = top };
         }
     }
 

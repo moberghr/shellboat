@@ -10,7 +10,12 @@ public class TerminalTabViewModelTests
 {
     private static readonly ConnectionEntry Entry = new()
     {
-        Id = Guid.NewGuid(), Name = "web", Kind = ConnectionKind.Ssh, Host = "web.example", UserName = "u", Ssh = new SshSettings(),
+        Id = Guid.NewGuid(),
+        Name = "web",
+        Kind = ConnectionKind.Ssh,
+        Host = "web.example",
+        UserName = "u",
+        Ssh = new SshSettings(),
     };
 
     private static (TerminalTabViewModel Vm, List<FakeChannel> Channels) Create(FakeSecrets secrets, FakeDialogs dialogs, Func<SshCredentials, Exception?> outcome)

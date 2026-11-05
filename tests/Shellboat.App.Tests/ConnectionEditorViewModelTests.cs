@@ -38,7 +38,12 @@ public class ConnectionEditorViewModelTests
         var folder = Guid.NewGuid();
         var original = new ConnectionEntry
         {
-            Id = Guid.NewGuid(), Name = "dc", FolderId = folder, Kind = ConnectionKind.Rdp, Host = "dc", UserName = "a",
+            Id = Guid.NewGuid(),
+            Name = "dc",
+            FolderId = folder,
+            Kind = ConnectionKind.Rdp,
+            Host = "dc",
+            UserName = "a",
             Rdp = new RdpSettings("CORP", RdpResolutionMode.Fixed, 1600, 900, 24),
         };
         var vm = new ConnectionEditorViewModel(original, null, true, true);

@@ -7,7 +7,11 @@ public class RdpRuntimeTests
 {
     private static ConnectionEntry Entry(RdpSettings? rdp = null) => new()
     {
-        Id = Guid.NewGuid(), Name = "dc", Kind = ConnectionKind.Rdp, Host = "dc.example", UserName = "admin",
+        Id = Guid.NewGuid(),
+        Name = "dc",
+        Kind = ConnectionKind.Rdp,
+        Host = "dc.example",
+        UserName = "admin",
         Rdp = rdp ?? new RdpSettings(),
     };
 

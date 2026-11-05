@@ -45,7 +45,12 @@ public class IconTreeTests
 {
     private static ConnectionEntry Ssh(NodeIcon? icon = null) => new()
     {
-        Id = Guid.NewGuid(), Name = "web", Kind = ConnectionKind.Ssh, Host = "web", Ssh = new SshSettings(), Icon = icon,
+        Id = Guid.NewGuid(),
+        Name = "web",
+        Kind = ConnectionKind.Ssh,
+        Host = "web",
+        Ssh = new SshSettings(),
+        Icon = icon,
     };
 
     [Fact]
