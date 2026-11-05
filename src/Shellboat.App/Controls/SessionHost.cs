@@ -63,6 +63,9 @@ public sealed class SessionHost : UserControl
             case RdpTabViewModel rdp:
                 _root.Children.Add(new RdpViewportView { DataContext = rdp });
                 break;
+            case SftpTabViewModel sftp:
+                _root.Children.Add(new SftpBrowserView { DataContext = sftp });
+                break;
         }
 
         _root.Children.Add(_overlay);

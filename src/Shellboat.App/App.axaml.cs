@@ -34,6 +34,7 @@ public partial class App : Application
                 secrets,
                 dialogs,
                 (connection, credentials) => new SshShellChannel(connection, credentials, trust, prompter),
+                (connection, credentials) => new SshFileChannel(connection, credentials, trust, prompter),
                 new KeePassXcCliImporter());
             window.DataContext = vm;
 

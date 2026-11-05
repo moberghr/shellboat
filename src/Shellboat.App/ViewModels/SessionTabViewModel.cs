@@ -36,7 +36,7 @@ public abstract partial class SessionTabViewModel : ObservableObject, IAsyncDisp
 
     public bool IsRdp => Connection.Kind == ConnectionKind.Rdp;
 
-    public string IconKey => ConnectionGlyph.IconKey(Connection.Kind);
+    public virtual string IconKey => ConnectionGlyph.IconKey(Connection.Kind);
 
     public string IconBrushKey => ConnectionGlyph.BrushKey(Connection.Kind);
 

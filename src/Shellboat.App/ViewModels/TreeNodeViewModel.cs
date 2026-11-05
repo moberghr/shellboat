@@ -25,6 +25,9 @@ public abstract partial class TreeNodeViewModel : ObservableObject
     /// <summary>Resource key of the glyph's tint (muted for folders, the kind colour for connections).</summary>
     public abstract string IconBrushKey { get; }
 
+    /// <summary>SSH connection rows get the "Open SFTP" menu item.</summary>
+    public virtual bool IsSsh => false;
+
     public ObservableCollection<TreeNodeViewModel> Children { get; } = [];
 }
 
@@ -60,4 +63,6 @@ public sealed class ConnectionNodeViewModel(ConnectionEntry entry) : TreeNodeVie
     public override string IconBrushKey => ConnectionGlyph.BrushKey(Entry.Kind);
 
     public bool IsRdp => Entry.Kind == ConnectionKind.Rdp;
+
+    public override bool IsSsh => Entry.Kind == ConnectionKind.Ssh;
 }

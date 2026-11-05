@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shellboat.App.ViewModels"
+             xmlns:c="using:Shellboat.App.Controls"
+             x:Class="Shellboat.App.Controls.SftpBrowserView"
+             x:DataType="vm:SftpTabViewModel"
+             Background="{DynamicResource Bg.Window}">
+  <DockPanel>
+    <!-- Toolbar: up, refresh, path, download -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="8,6">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" Margin="0,0,6,0">
+          <Button Classes="Toolbar" Content="↑" Command="{Binding UpCommand}" ToolTip.Tip="Parent folder"/>
+          <Button Classes="Toolbar" Content="⟳" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh"/>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" Margin="6,0,0,0">
+          <Button Classes="Toolbar" Content="Download" Command="{Binding DownloadCommand}" ToolTip.Tip="Download the selection to your Downloads folder"/>
+          <Button Classes="Toolbar" Content="Download to…" Command="{Binding DownloadToCommand}" ToolTip.Tip="Choose where to save the selection"/>
+          <Button Classes="Toolbar" Content="Cancel" Command="{Binding CancelTransferCommand}" IsVisible="{Binding IsTransferring}"/>
+        </StackPanel>
+        <TextBox Text="{Binding PathInput}" FontFamily="{DynamicResource MonoFontFamily}" VerticalContentAlignment="Center">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding NavigateCommand}" CommandParameter="{Binding PathInput}"/>
+          </TextBox.KeyBindings>
+        </TextBox>
+      </DockPanel>
+    </Border>
+
+    <!-- Status line -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10,3">
+      <TextBlock Text="{Binding Message}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
+    </Border>
+
+    <!-- Column header -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="26,*,100,140" Margin="12,6,12,2">
+      <TextBlock Grid.Column="1" Text="Name" Classes="Caption"/>
+      <TextBlock Grid.Column="2" Text="Size" Classes="Caption" HorizontalAlignment="Right" Margin="0,0,12,0"/>
+      <TextBlock Grid.Column="3" Text="Modified" Classes="Caption"/>
+    </Grid>
+
+    <ListBox Name="Files" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}" SelectionMode="Multiple"
+             Background="Transparent" Padding="4,0">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:RemoteFileItemViewModel">
+          <Grid ColumnDefinitions="26,*,100,140" Background="Transparent">
+            <Grid.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Open" IsVisible="{Binding IsDirectory}" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}"/>
+                <MenuItem Header="Download" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemCommand}" CommandParameter="{Binding}"/>
+                <MenuItem Header="Download to…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemToCommand}" CommandParameter="{Binding}"/>
+                <Separator/>
+                <MenuItem Header="Copy path" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).CopyPathCommand}" CommandParameter="{Binding}"/>
+                <MenuItem Header="Rename…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).RenameCommand}" CommandParameter="{Binding}"/>
+                <Separator/>
+                <MenuItem Header="Properties" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).PropertiesCommand}" CommandParameter="{Binding}"/>
+              </ContextMenu>
+            </Grid.ContextMenu>
+            <PathIcon Grid.Column="0" Width="14" Height="14" HorizontalAlignment="Left"
+                      Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                      Foreground="{Binding IconBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="2" Text="{Binding SizeText}" Classes="Caption" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Classes="Caption" VerticalAlignment="Center"/>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

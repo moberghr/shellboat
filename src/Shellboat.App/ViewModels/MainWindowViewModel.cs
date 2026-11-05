@@ -21,6 +21,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IDialogService _dialogs;
     private readonly CredentialResolver _credentials;
     private readonly ShellChannelFactory _shellFactory;
+    private readonly FileChannelFactory _fileFactory;
     private readonly ICredentialImporter _importer;
     private readonly Func<string, CancellationToken, Task<RoyalImportResult>> _royalReader;
 
@@ -36,6 +37,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ISecretStore secrets,
         IDialogService dialogs,
         ShellChannelFactory shellFactory,
+        FileChannelFactory fileFactory,
         ICredentialImporter importer,
         Func<string, CancellationToken, Task<RoyalImportResult>>? royalReader = null)
     {
@@ -44,6 +46,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _secrets = secrets;
         _dialogs = dialogs;
         _shellFactory = shellFactory;
+        _fileFactory = fileFactory;
         _importer = importer;
         _credentials = new CredentialResolver(secrets, dialogs);
         Tabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTabs));
@@ -70,6 +73,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SessionTabViewModel tab = c.Entry.Kind == ConnectionKind.Rdp
             ? new RdpTabViewModel(c.Entry, _credentials, _dialogs)
             : new TerminalTabViewModel(c.Entry, _shellFactory, _credentials, _dialogs);
+        await OpenTabAsync(tab);
+    }
+
+    /// <summary>File browser (SFTP) for an SSH connection, in its own tab.</summary>
+    [RelayCommand]
+    private async Task OpenSftpAsync(TreeNodeViewModel? node)
+    {
+        if ((node ?? Tree.Selected) is not ConnectionNodeViewModel { IsSsh: true } c)
+        {
+            return;
+        }
+
+        await OpenTabAsync(new SftpTabViewModel(c.Entry, _fileFactory, _credentials, _dialogs));
+    }
+
+    private async Task OpenTabAsync(SessionTabViewModel tab)
+    {
         tab.CloseRequested += async (_, _) => await CloseTabAsync(tab);
         Tabs.Add(tab);
         SelectedTab = tab;

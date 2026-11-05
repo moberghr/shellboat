@@ -53,6 +53,7 @@
                 <Border.ContextMenu>
                   <ContextMenu>
                     <MenuItem Header="Connect" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ConnectCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Open SFTP (files)" IsVisible="{Binding IsSsh}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenSftpCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Edit / Rename" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).EditCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Duplicate" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DuplicateCommand}" CommandParameter="{Binding}"/>
                     <Separator/>

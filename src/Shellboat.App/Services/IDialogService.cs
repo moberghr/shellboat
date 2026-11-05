@@ -35,4 +35,9 @@ public interface IDialogService
 
     /// <returns>Local path of the chosen file, or null when cancelled.</returns>
     Task<string?> PickFileAsync(string title, string fileTypeName, IReadOnlyList<string> patterns);
+
+    Task SetClipboardTextAsync(string text);
+
+    /// <returns>Local path of the chosen folder, or null when cancelled.</returns>
+    Task<string?> PickFolderAsync(string title);
 }

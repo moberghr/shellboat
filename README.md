@@ -11,6 +11,10 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
 - **SSH** in embedded terminal tabs (xterm-256color). Supports password or private-key auth (with passphrase),
   resizing, scrollback (wheel, Shift+PgUp/PgDn), copy-on-select, right-click paste and bracketed paste.
   An unknown host key asks before trusting it; a changed host key blocks the connection.
+- **SFTP file browser** for SSH connections (right-click → *Open SFTP (files)*): browse folders and download
+  files or whole folders. Double-click a file to save it to `~/Downloads`; use *Download to…* to pick a folder.
+  Existing files are never overwritten (`name (1).ext`). Right-click a row to download, copy its path, rename it
+  or see its properties (size, dates, permissions, owner).
 - **RDP** in embedded tabs via FreeRDP 3. The remote resolution follows the tab size, the remote cursor is
   shown, text clipboard works in both directions, and certificates prompt on first use or when they change.
 - Secrets are stored in the **OS keychain** (macOS Keychain, Windows Credential Manager, libsecret). Nothing

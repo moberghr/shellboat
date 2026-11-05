@@ -1,7 +1,6 @@
 using Avalonia.Threading;
 using Shellboat.App.Services;
 using Shellboat.Core.Connections;
-using Shellboat.Core.Secrets;
 using Shellboat.Core.Sessions;
 using Shellboat.Terminal;
 
@@ -17,7 +16,6 @@ public delegate IShellChannel ShellChannelFactory(ConnectionEntry connection, Ss
 /// </summary>
 public sealed class TerminalTabViewModel : SessionTabViewModel
 {
-    private const int MaxAuthAttempts = 3;
     private readonly ShellChannelFactory _channelFactory;
     private readonly CredentialResolver _credentials;
     private readonly IDialogService _dialogs;
@@ -60,59 +58,31 @@ public sealed class TerminalTabViewModel : SessionTabViewModel
         State = SessionState.Connecting;
         Error = null;
 
-        var isKey = Connection.Ssh?.Auth == SshAuthMethod.PrivateKey;
-        var purpose = isKey ? SecretPurpose.KeyPassphrase : SecretPurpose.Password;
-        var secret = await _credentials.GetSavedAsync(Connection, purpose, ct);
-        if (secret is null && !isKey)
-        {
-            secret = await _credentials.PromptAsync(Connection, purpose, null, ct);
-            if (secret is null)
+        var result = await SshConnectFlow.ConnectAsync(
+            Connection,
+            _credentials,
+            creds =>
             {
-                Fail("Cancelled.");
-                return;
-            }
+                var channel = _channelFactory(Connection, creds);
+                channel.DataReceived += OnData;
+                channel.Closed += OnClosed;
+                return channel;
+            },
+            (channel, token) => channel.ConnectAsync(Emulator.Cols, Emulator.Rows, token),
+            async channel => await DisposeChannelAsync(channel),
+            ct);
+
+        if (result.Channel is { } connected)
+        {
+            _channel = connected;
+            State = SessionState.Connected;
+            return;
         }
 
-        for (var attempt = 1; attempt <= MaxAuthAttempts; attempt++)
+        Fail(result.Error ?? "Connection failed.");
+        if (result.HostKeyRejected)
         {
-            var creds = isKey ? new SshCredentials(null, secret) : new SshCredentials(secret, null);
-            var channel = _channelFactory(Connection, creds);
-            channel.DataReceived += OnData;
-            channel.Closed += OnClosed;
-            try
-            {
-                await channel.ConnectAsync(Emulator.Cols, Emulator.Rows, ct);
-                _channel = channel;
-                State = SessionState.Connected;
-                return;
-            }
-            catch (AuthenticationFailedException ex) when (attempt < MaxAuthAttempts)
-            {
-                await DisposeChannelAsync(channel);
-                secret = await _credentials.PromptAsync(Connection, purpose, ex.Message, ct);
-                if (secret is null)
-                {
-                    Fail("Cancelled.");
-                    return;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                await DisposeChannelAsync(channel);
-                Fail("Cancelled.");
-                return;
-            }
-            catch (Exception ex)
-            {
-                await DisposeChannelAsync(channel);
-                Fail(ex.Message);
-                if (ex is HostKeyRejectedException)
-                {
-                    await _dialogs.ShowMessageAsync("Host key rejected", ex.Message);
-                }
-
-                return;
-            }
+            await _dialogs.ShowMessageAsync("Host key rejected", result.Error ?? "");
         }
     }
 

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -29,7 +30,8 @@ public sealed class DialogService : IDialogService
         {
             result = new SecretPromptResult(box.Text ?? "", remember.IsChecked == true);
             window.Close();
-        }));
+        }
+        ));
         window.Opened += (_, _) => box.Focus();
         await Show(window);
         return result;
@@ -43,7 +45,8 @@ public sealed class DialogService : IDialogService
         {
             accepted = true;
             window.Close();
-        }));
+        }
+        ));
         await Show(window);
         return accepted;
     });
@@ -65,7 +68,8 @@ public sealed class DialogService : IDialogService
         {
             result = box.Text;
             window.Close();
-        }));
+        }
+        ));
         window.Opened += (_, _) =>
         {
             box.Focus();
@@ -94,12 +98,14 @@ public sealed class DialogService : IDialogService
             {
                 decision = CertificateTrustDecision.TrustOnce;
                 window.Close();
-            }),
+            }
+        ),
             ("Trust always", true, () =>
             {
                 decision = CertificateTrustDecision.TrustAlways;
                 window.Close();
-            }));
+            }
+        ));
         await Show(window);
         return decision;
     });
@@ -135,6 +141,29 @@ public sealed class DialogService : IDialogService
             ],
         });
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+    });
+
+    public Task SetClipboardTextAsync(string text) => OnUi(async () =>
+    {
+        if (Owner?.Clipboard is { } clipboard)
+        {
+            await clipboard.SetTextAsync(text);
+        }
+    });
+
+    public Task<string?> PickFolderAsync(string title) => OnUi(async () =>
+    {
+        if (Owner is not { } owner)
+        {
+            return null;
+        }
+
+        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+        });
+        return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
     });
 
     private static Task<T> OnUi<T>(Func<Task<T>> action)

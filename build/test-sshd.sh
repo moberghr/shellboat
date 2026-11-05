@@ -17,7 +17,22 @@ mkdir -p "$keydir"
 [[ -f "$keydir/id_ed25519" ]] || ssh-keygen -q -t ed25519 -N "" -f "$keydir/id_ed25519" -C shellboat-test
 [[ -f "$keydir/id_ed25519_pass" ]] || ssh-keygen -q -t ed25519 -N "testpass" -f "$keydir/id_ed25519_pass" -C shellboat-test-pass
 
+# OpenSSH 10 penalises a source IP after failed logins (PerSourcePenalties) and then drops every new connection
+# for a while — the negative tests (wrong password, rejected host key) would lock the rest of the suite out.
+relax_penalties() {
+  if docker exec "$name" grep -q '^PerSourcePenalties no' /config/sshd/sshd_config; then
+    return
+  fi
+  docker exec "$name" sh -c 'echo "PerSourcePenalties no" >> /config/sshd/sshd_config'
+  docker restart "$name" >/dev/null
+  for _ in $(seq 1 30); do
+    if docker logs --since 5s "$name" 2>&1 | grep -q "done\|Server listening"; then break; fi
+    sleep 1
+  done
+}
+
 if docker ps --format '{{.Names}}' | grep -qx "$name"; then
+  relax_penalties
   echo "$name already running"
   exit 0
 fi
@@ -34,4 +49,5 @@ for _ in $(seq 1 30); do
   if docker logs "$name" 2>&1 | grep -q "done\|Server listening"; then break; fi
   sleep 1
 done
+relax_penalties
 echo "$name listening on 127.0.0.1:2222 (user shellboat / shellboat-test, keys in build/.test-sshd)"

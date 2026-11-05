@@ -10,7 +10,12 @@
 ## §9.2 — SSH
 - `SshShellChannel`: password + keyboard-interactive for password auth, `PrivateKeyFile` for keys.
   `AuthenticationFailedException` = re-prompt; `HostKeyRejectedException` = never retry.
-- Not yet: ssh-agent, jump hosts, port forwarding, SFTP browser.
+- Shared login: `SshLogin` (auth methods, host-key check, exception mapping) backs both `SshShellChannel` and
+  `SshFileChannel`; the App side shares the credential loop in `Services/SshConnectFlow`.
+- SFTP browser (`SftpTabViewModel`, "Open SFTP" on SSH rows): browse, download (files and folders, recursive),
+  and a row menu with copy path, rename (same folder only; `RenameAsync` refuses an existing target) and properties. Remote names are server input — `LocalDownloads.SafeName`/`UniquePath` keep them inside the
+  target folder and never overwrite; symlinked folders are not followed; a failed file is deleted, not left partial.
+- Not yet: ssh-agent, jump hosts, port forwarding, SFTP upload/delete/move between folders.
 
 ## §9.3 — RDP
 - Ported from RDPilot (commit in `native/freerdp-wrapper/NOTICE.md`). Frames: native thread signals, UI
