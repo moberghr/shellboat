@@ -156,6 +156,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ChangeIconAsync(TreeNodeViewModel? node)
+    {
+        node ??= Tree.Selected;
+        if (node is null)
+        {
+            return;
+        }
+
+        var defaultBrush = node is ConnectionNodeViewModel c ? ConnectionGlyph.BrushKey(c.Entry.Kind) : ConnectionGlyph.FolderBrush;
+        var picker = new IconPickerViewModel(node.Title, node.DefaultGlyphName, defaultBrush, node.Icon);
+        if (await _dialogs.PickIconAsync(picker))
+        {
+            await Tree.SetIconAsync(node.Id, picker.Result);
+        }
+    }
+
+    [RelayCommand]
     private async Task NewFolderAsync()
     {
         var name = await _dialogs.PromptTextAsync("New folder", "Folder name", "");

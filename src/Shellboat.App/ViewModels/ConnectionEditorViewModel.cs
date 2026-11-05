@@ -173,6 +173,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
             Port = port,
             UserName = UserName.Trim(),
             Notes = Notes,
+            Icon = _original?.Icon,
             Ssh = IsSsh ? new SshSettings(AuthIndex == 1 ? SshAuthMethod.PrivateKey : SshAuthMethod.Password, ShowKey ? PrivateKeyPath.Trim() : null) : null,
             Rdp = IsRdp ? new RdpSettings(Domain.Trim(), IsFixedResolution ? RdpResolutionMode.Fixed : RdpResolutionMode.Dynamic, width, height, ColorDepthIndex switch { 0 => 16, 1 => 24, _ => 32 }) : null,
         };

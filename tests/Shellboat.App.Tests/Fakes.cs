@@ -77,6 +77,18 @@ internal sealed class FakeDialogs : IDialogService
 
     public Task ShowKeePassImportAsync(KeePassImportViewModel import) => Task.CompletedTask;
 
+    /// <summary>Applied to the picker before "saving"; null = the user cancels.</summary>
+    public Action<IconPickerViewModel>? IconChoice { get; set; }
+
+    public IconPickerViewModel? LastPicker { get; private set; }
+
+    public Task<bool> PickIconAsync(IconPickerViewModel picker)
+    {
+        LastPicker = picker;
+        IconChoice?.Invoke(picker);
+        return Task.FromResult(IconChoice is not null);
+    }
+
     public string? PickedFile { get; set; }
 
     public Task<string?> PickFileAsync(string title, string fileTypeName, IReadOnlyList<string> patterns) => Task.FromResult(PickedFile);

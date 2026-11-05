@@ -75,3 +75,41 @@ public class JsonConnectionStoreTests
         }
     }
 }
+
+public class JsonConnectionStoreIconTests
+{
+    [Fact]
+    public async Task Icons_round_trip_on_folders_and_connections()
+    {
+        using var dir = new TempDir();
+        var store = new JsonConnectionStore(dir.File("connections.json"));
+        var folder = new Folder(Guid.NewGuid(), "Prod", null, 0, new NodeIcon("server", null));
+        var conn = new ConnectionEntry
+        {
+            Id = Guid.NewGuid(), Name = "db", Kind = ConnectionKind.Ssh, Host = "db", Icon = new NodeIcon("database", "#E3B457"),
+        };
+
+        await store.SaveAsync(new ConnectionTreeDocument([folder], [conn]), default);
+        var loaded = await store.LoadAsync(default);
+
+        Assert.Equal(new NodeIcon("server", null), loaded.Folders.Single().Icon);
+        Assert.Equal(new NodeIcon("database", "#E3B457"), loaded.Connections.Single().Icon);
+        Assert.Contains("\"glyph\": \"database\"", await File.ReadAllTextAsync(dir.File("connections.json")));
+    }
+
+    [Fact]
+    public async Task Files_from_before_icons_load_with_no_icon()
+    {
+        using var dir = new TempDir();
+        var id = Guid.NewGuid();
+        await File.WriteAllTextAsync(dir.File("connections.json"), $$"""
+            { "folders": [ { "id": "{{Guid.NewGuid()}}", "name": "Old", "sortOrder": 0 } ],
+              "connections": [ { "id": "{{id}}", "name": "web", "kind": "Ssh", "host": "web" } ] }
+            """);
+
+        var loaded = await new JsonConnectionStore(dir.File("connections.json")).LoadAsync(default);
+
+        Assert.Null(loaded.Folders.Single().Icon);
+        Assert.Null(loaded.Connections.Single().Icon);
+    }
+}

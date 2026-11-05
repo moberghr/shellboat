@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Shellboat.App.ViewModels"
+        xmlns:cn="using:Shellboat.App.Connections"
+        xmlns:c="using:Shellboat.App.Controls"
+        x:Class="Shellboat.App.Views.IconPickerWindow"
+        x:DataType="vm:IconPickerViewModel"
+        Title="{Binding Title}"
+        Width="460" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Bg.Chrome}">
+  <StackPanel Margin="18" Spacing="14">
+    <!-- Preview: how the row will look -->
+    <Border Background="{DynamicResource Bg.Window}" CornerRadius="6" Padding="12,8">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <PathIcon Width="16" Height="16"
+                  Data="{Binding PreviewIconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                  Foreground="{Binding PreviewBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+        <TextBlock Text="{Binding ItemName}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="Icon" Classes="Caption"/>
+      <ListBox ItemsSource="{Binding Glyphs}" SelectedItem="{Binding SelectedGlyph}" Background="Transparent">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="cn:GlyphChoice">
+            <PathIcon Width="18" Height="18" Margin="4" ToolTip.Tip="{Binding Label}"
+                      Data="{Binding ResourceKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                      Foreground="{Binding $parent[ListBox].((vm:IconPickerViewModel)DataContext).PreviewBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="Colour" Classes="Caption"/>
+      <ListBox ItemsSource="{Binding Colors}" SelectedItem="{Binding SelectedColor}" Background="Transparent">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ColorOption">
+            <Border Width="20" Height="20" CornerRadius="10" Margin="2" ToolTip.Tip="{Binding Label}"
+                    Background="{Binding BrushKey, Converter={x:Static c:ResourceBrush.Instance}}"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+
+    <DockPanel>
+      <Button DockPanel.Dock="Left" Content="Reset to default" Command="{Binding ResetCommand}"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Cancel" Click="OnCancel" IsCancel="True"/>
+        <Button Content="Save" Click="OnSave" IsDefault="True" Classes="accent"/>
+      </StackPanel>
+    </DockPanel>
+  </StackPanel>
+</Window>

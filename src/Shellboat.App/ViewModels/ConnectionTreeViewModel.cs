@@ -82,6 +82,10 @@ public sealed partial class ConnectionTreeViewModel : ObservableObject
     public Task RenameFolderAsync(Guid folderId, string name)
         => ApplyAsync(ConnectionTreeEditor.RenameFolder(Document, folderId, name), folderId);
 
+    /// <summary>Sets or (null) resets the icon of a folder or connection.</summary>
+    public Task SetIconAsync(Guid id, NodeIcon? icon)
+        => ApplyAsync(ConnectionTreeEditor.SetIcon(Document, id, icon), id);
+
     public Task UpsertAsync(ConnectionEntry entry)
         => ApplyAsync(ConnectionTreeEditor.Upsert(Document, entry), entry.Id);
 

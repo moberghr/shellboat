@@ -16,6 +16,9 @@ public sealed record ConnectionEntry
     public int Port { get; init; }
     public string UserName { get; init; } = "";
     public string Notes { get; init; } = "";
+
+    /// <summary>User-chosen tree icon; null = the default for <see cref="Kind"/>.</summary>
+    public NodeIcon? Icon { get; init; }
     public SshSettings? Ssh { get; init; }
     public RdpSettings? Rdp { get; init; }
 

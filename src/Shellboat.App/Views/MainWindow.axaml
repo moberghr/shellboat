@@ -58,6 +58,7 @@
                     <MenuItem Header="Open SFTP (files)" IsVisible="{Binding IsSsh}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenSftpCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Edit / Rename" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).EditCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Duplicate" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DuplicateCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Change icon…" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ChangeIconCommand}" CommandParameter="{Binding}"/>
                     <Separator/>
                     <MenuItem Header="New folder here" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NewFolderCommand}"/>
                     <MenuItem Header="New connection here" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NewConnectionCommand}"/>

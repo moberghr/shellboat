@@ -19,6 +19,8 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
   shown, text clipboard works in both directions, and certificates prompt on first use or when they change.
 - Secrets are stored in the **OS keychain** (macOS Keychain, Windows Credential Manager, libsecret). Nothing
   secret is written to `connections.json`.
+- **Custom icons**: right-click a connection or folder → *Change icon…* to pick one of 22 built-in glyphs (server,
+  database, cloud, firewall, …) and a colour. Re-importing keeps the icons you chose.
 - **Import from Royal TSX / Royal TS** (`.rtsz`): folders, SSH and RDP connections, hosts, ports, users and key
   paths. Royal's saved passwords are encrypted with an undocumented scheme and are **not** imported; you're asked
   on first connect, or you can import them from KeePass.

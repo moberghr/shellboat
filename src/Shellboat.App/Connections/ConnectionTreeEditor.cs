@@ -23,6 +23,13 @@ public static class ConnectionTreeEditor
         => doc with { Folders = [.. doc.Folders.Select(f => f.Id == folderId ? f with { Name = name } : f)] };
 
     /// <summary>Insert or replace a connection (matched by id).</summary>
+    /// <summary>Sets (or with null, resets) the icon of the folder or connection <paramref name="id"/>.</summary>
+    public static ConnectionTreeDocument SetIcon(ConnectionTreeDocument doc, Guid id, NodeIcon? icon) => doc with
+    {
+        Folders = [.. doc.Folders.Select(f => f.Id == id ? f with { Icon = icon } : f)],
+        Connections = [.. doc.Connections.Select(c => c.Id == id ? c with { Icon = icon } : c)],
+    };
+
     public static ConnectionTreeDocument Upsert(ConnectionTreeDocument doc, ConnectionEntry entry)
     {
         if (entry.FolderId is { } folder && doc.Folders.All(f => f.Id != folder))
@@ -137,23 +144,27 @@ public static class ConnectionTreeEditor
         var folders = doc.Folders.ToDictionary(f => f.Id);
         foreach (var f in imported.Folders)
         {
-            folders[f.Id] = f with { ParentId = f.ParentId ?? rootFolderId };
+            // An importer never sets icons; keep the one the user chose.
+            var icon = f.Icon ?? (folders.TryGetValue(f.Id, out var existing) ? existing.Icon : null);
+            folders[f.Id] = f with { ParentId = f.ParentId ?? rootFolderId, Icon = icon };
         }
 
         var connections = doc.Connections.ToDictionary(c => c.Id);
         int added = 0, updated = 0;
         foreach (var c in imported.Connections)
         {
-            if (connections.ContainsKey(c.Id))
+            var icon = c.Icon;
+            if (connections.TryGetValue(c.Id, out var existing))
             {
                 updated++;
+                icon ??= existing.Icon;
             }
             else
             {
                 added++;
             }
 
-            connections[c.Id] = c with { FolderId = c.FolderId ?? rootFolderId };
+            connections[c.Id] = c with { FolderId = c.FolderId ?? rootFolderId, Icon = icon };
         }
 
         // Keep the original order of existing items, new ones appended.

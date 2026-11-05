@@ -116,6 +116,12 @@ public sealed class DialogService : IDialogService
         return Owner is { } owner ? await window.ShowDialog<bool>(owner) : false;
     });
 
+    public Task<bool> PickIconAsync(IconPickerViewModel picker) => OnUi(async () =>
+    {
+        var window = new IconPickerWindow { DataContext = picker };
+        return Owner is { } owner ? await window.ShowDialog<bool>(owner) : false;
+    });
+
     public Task ShowKeePassImportAsync(KeePassImportViewModel import) => OnUi(async () =>
     {
         var window = new KeePassImportWindow { DataContext = import };

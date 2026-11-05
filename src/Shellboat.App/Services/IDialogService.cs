@@ -33,6 +33,9 @@ public interface IDialogService
 
     Task ShowKeePassImportAsync(KeePassImportViewModel import);
 
+    /// <returns>True when the user saved the picker's choice.</returns>
+    Task<bool> PickIconAsync(IconPickerViewModel picker);
+
     /// <returns>Local path of the chosen file, or null when cancelled.</returns>
     Task<string?> PickFileAsync(string title, string fileTypeName, IReadOnlyList<string> patterns);
 

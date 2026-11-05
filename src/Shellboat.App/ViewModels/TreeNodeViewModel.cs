@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Shellboat.App.Connections;
 using Shellboat.Core.Connections;
 
 namespace Shellboat.App.ViewModels;
@@ -22,8 +23,15 @@ public abstract partial class TreeNodeViewModel : ObservableObject
     /// <summary>Resource key of the row glyph (Icon.Folder / Icon.Ssh / Icon.Rdp).</summary>
     public abstract string IconKey { get; }
 
-    /// <summary>Resource key of the glyph's tint (muted for folders, the kind colour for connections).</summary>
+    /// <summary>Theme brush key of the glyph's tint (muted for folders, the kind colour for connections), or the
+    /// user's "#RRGGBB".</summary>
     public abstract string IconBrushKey { get; }
+
+    /// <summary>What the user picked, or null for the default.</summary>
+    public abstract NodeIcon? Icon { get; }
+
+    /// <summary>The catalog glyph that matches the default look (picking it = no override).</summary>
+    public abstract string DefaultGlyphName { get; }
 
     /// <summary>SSH connection rows get the "Open SFTP" menu item.</summary>
     public virtual bool IsSsh => false;
@@ -41,9 +49,13 @@ public sealed class FolderNodeViewModel(Folder folder) : TreeNodeViewModel
 
     public override string Subtitle => "";
 
-    public override string IconKey => ConnectionGlyph.FolderIcon;
+    public override NodeIcon? Icon => Folder.Icon;
 
-    public override string IconBrushKey => ConnectionGlyph.FolderBrush;
+    public override string DefaultGlyphName => ConnectionGlyph.FolderGlyphName;
+
+    public override string IconKey => IconCatalog.GlyphKey(Folder.Icon, ConnectionGlyph.FolderIcon);
+
+    public override string IconBrushKey => IconCatalog.BrushKey(Folder.Icon, ConnectionGlyph.FolderBrush);
 }
 
 public sealed class ConnectionNodeViewModel(ConnectionEntry entry) : TreeNodeViewModel
@@ -58,9 +70,13 @@ public sealed class ConnectionNodeViewModel(ConnectionEntry entry) : TreeNodeVie
         ? Entry.Host
         : $"{Entry.Host}:{Entry.EffectivePort}";
 
-    public override string IconKey => ConnectionGlyph.IconKey(Entry.Kind);
+    public override NodeIcon? Icon => Entry.Icon;
 
-    public override string IconBrushKey => ConnectionGlyph.BrushKey(Entry.Kind);
+    public override string DefaultGlyphName => ConnectionGlyph.GlyphName(Entry.Kind);
+
+    public override string IconKey => IconCatalog.GlyphKey(Entry.Icon, ConnectionGlyph.IconKey(Entry.Kind));
+
+    public override string IconBrushKey => IconCatalog.BrushKey(Entry.Icon, ConnectionGlyph.BrushKey(Entry.Kind));
 
     public bool IsRdp => Entry.Kind == ConnectionKind.Rdp;
 
