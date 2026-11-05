@@ -179,3 +179,119 @@ public class TabMenuTests
         Assert.Same(keep, s.Vm.SelectedTab);
     }
 }
+
+public class TabMoveAndDetachTests
+{
+    private sealed class NoImporter : ICredentialImporter
+    {
+        public Task<IReadOnlyList<ImportedEntry>> ReadAsync(string databasePath, string masterPassword, string? keyFilePath, CancellationToken ct)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>Three terminal tabs a, b, c to the same connection, titled for readability.</summary>
+    private static Task<MainWindowViewModel> ThreeTabsAsync() => ThreeTabsAsync([]);
+
+    private static async Task<MainWindowViewModel> ThreeTabsAsync(List<FakeChannel> channels)
+    {
+        var secrets = new FakeSecrets();
+        var tree = new ConnectionTreeViewModel(new MemoryConnectionStore(), secrets);
+        var conn = new ConnectionEntry { Id = Guid.NewGuid(), Name = "web", Kind = ConnectionKind.Ssh, Host = "web", UserName = "u", Ssh = new SshSettings() };
+        await tree.UpsertAsync(conn);
+        secrets.Items[(conn.Id, SecretPurpose.Password)] = "pw";
+        var vm = new MainWindowViewModel(tree, secrets, new FakeDialogs(),
+            (_, creds) =>
+            {
+                var channel = new FakeChannel(_ => null, creds);
+                channels.Add(channel);
+                return channel;
+            },
+            (_, creds) => new FakeFileChannel(_ => null, creds),
+            new NoImporter());
+        foreach (var title in new[] { "a", "b", "c" })
+        {
+            await vm.ConnectCommand.ExecuteAsync(vm.Tree.Roots.Single());
+            vm.Tabs[^1].Title = title;
+        }
+
+        return vm;
+    }
+
+    private static string Order(MainWindowViewModel vm) => string.Concat(vm.Tabs.Select(t => t.Title));
+
+    [Theory]
+    [InlineData("a", 2, "bca")]
+    [InlineData("c", 0, "cab")]
+    [InlineData("b", 1, "abc")]
+    [InlineData("a", 99, "bca")]
+    [InlineData("c", -3, "cab")]
+    public async Task MoveTab_reorders_clamps_and_keeps_the_dragged_tab_selected(string title, int to, string expected)
+    {
+        var vm = await ThreeTabsAsync();
+        var tab = vm.Tabs.Single(t => t.Title == title);
+
+        vm.MoveTab(tab, to);
+
+        Assert.Equal(expected, Order(vm));
+        Assert.Same(tab, vm.SelectedTab);
+    }
+
+    [Fact]
+    public async Task Detach_moves_the_live_session_out_of_the_strip_and_selects_a_neighbour()
+    {
+        var vm = await ThreeTabsAsync();
+        var b = vm.Tabs[1];
+        vm.SelectedTab = b;
+
+        vm.DetachTabCommand.Execute(b);
+
+        Assert.Equal("ac", Order(vm));
+        Assert.Same(b, vm.DetachedTabs.Single());
+        Assert.Equal("c", vm.SelectedTab?.Title);
+        Assert.True(b.IsConnected); // detaching never reconnects or disposes
+    }
+
+    [Fact]
+    public async Task Attach_brings_it_back_as_the_last_selected_tab()
+    {
+        var vm = await ThreeTabsAsync();
+        var a = vm.Tabs[0];
+        vm.DetachTabCommand.Execute(a);
+
+        vm.AttachTabCommand.Execute(a);
+
+        Assert.Equal("bca", Order(vm));
+        Assert.Empty(vm.DetachedTabs);
+        Assert.Same(a, vm.SelectedTab);
+        Assert.True(a.IsConnected);
+    }
+
+    [Fact]
+    public async Task Closing_a_detached_session_disposes_its_channel()
+    {
+        var channels = new List<FakeChannel>();
+        var vm = await ThreeTabsAsync(channels);
+        var a = vm.Tabs[0];
+        vm.DetachTabCommand.Execute(a);
+        Assert.False(channels[0].Disposed);
+
+        await vm.CloseTabCommand.ExecuteAsync(a);
+
+        Assert.Empty(vm.DetachedTabs);
+        Assert.Equal("bc", Order(vm));
+        Assert.True(channels[0].Disposed);
+        Assert.All(channels.Skip(1), c => Assert.False(c.Disposed));
+    }
+
+    [Fact]
+    public async Task Typing_exit_in_a_detached_session_closes_it()
+    {
+        var vm = await ThreeTabsAsync();
+        var a = vm.Tabs[0];
+        vm.DetachTabCommand.Execute(a);
+
+        a.CloseCommand.Execute(null);
+        await Task.Yield();
+
+        Assert.Empty(vm.DetachedTabs);
+    }
+}

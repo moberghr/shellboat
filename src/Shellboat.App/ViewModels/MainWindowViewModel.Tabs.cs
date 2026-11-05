@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
 using Shellboat.Core.Connections;
 
@@ -6,6 +7,50 @@ namespace Shellboat.App.ViewModels;
 /// <summary>The tab header's context menu. Title and colour are session-only; the icon is the connection's.</summary>
 public sealed partial class MainWindowViewModel
 {
+    /// <summary>Sessions living in their own window. The view opens one window per entry and closes it when the
+    /// entry goes; the session itself is the same object, so detaching never reconnects.</summary>
+    public ObservableCollection<SessionTabViewModel> DetachedTabs { get; } = [];
+
+    /// <summary>Drag-to-reorder: puts <paramref name="tab"/> at <paramref name="index"/> (clamped) and keeps it
+    /// selected.</summary>
+    public void MoveTab(SessionTabViewModel tab, int index)
+    {
+        var from = Tabs.IndexOf(tab);
+        if (from < 0)
+        {
+            return;
+        }
+
+        var to = Math.Clamp(index, 0, Tabs.Count - 1);
+        if (from != to)
+        {
+            Tabs.Move(from, to);
+        }
+
+        SelectedTab = tab;
+    }
+
+    /// <summary>Moves a tab out of the strip into its own window, keeping the session.</summary>
+    [RelayCommand]
+    private void DetachTab(SessionTabViewModel? tab)
+    {
+        if (tab is not null && RemoveFromStrip(tab))
+        {
+            DetachedTabs.Add(tab);
+        }
+    }
+
+    /// <summary>Brings a detached session back as the last tab and selects it.</summary>
+    [RelayCommand]
+    private void AttachTab(SessionTabViewModel? tab)
+    {
+        if (tab is not null && DetachedTabs.Remove(tab))
+        {
+            Tabs.Add(tab);
+            SelectedTab = tab;
+        }
+    }
+
     /// <summary>The tab's connection as currently saved (edits since the tab opened), or the tab's copy when it was
     /// deleted from the tree.</summary>
     private ConnectionEntry CurrentEntry(SessionTabViewModel tab)

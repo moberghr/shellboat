@@ -118,6 +118,7 @@
                       </MenuItem.ItemContainerTheme>
                     </MenuItem>
                     <MenuItem Header="Change icon…" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ChangeTabIconCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Detach to window" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DetachTabCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Show in connection tree" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ShowTabInTreeCommand}" CommandParameter="{Binding}"/>
                     <Separator/>
                     <MenuItem Header="Close" Command="{Binding CloseCommand}"/>

@@ -143,22 +143,34 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await tab.ConnectAsync();
     }
 
+    /// <summary>Closes a tab wherever it lives: in the tab strip or in its own (detached) window.</summary>
     [RelayCommand]
     private async Task CloseTabAsync(SessionTabViewModel? tab)
     {
-        if (tab is null || !Tabs.Contains(tab))
+        if (tab is null || !(RemoveFromStrip(tab) || DetachedTabs.Remove(tab)))
         {
             return;
         }
 
+        await tab.DisposeAsync();
+    }
+
+    /// <summary>Takes a tab out of the strip (session untouched) and selects its neighbour. False if it isn't there.</summary>
+    private bool RemoveFromStrip(SessionTabViewModel tab)
+    {
         var index = Tabs.IndexOf(tab);
-        Tabs.Remove(tab);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        Tabs.RemoveAt(index);
         if (ReferenceEquals(SelectedTab, tab) || SelectedTab is null)
         {
             SelectedTab = Tabs.Count == 0 ? null : Tabs[Math.Min(index, Tabs.Count - 1)];
         }
 
-        await tab.DisposeAsync();
+        return true;
     }
 
     [RelayCommand]

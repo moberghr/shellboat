@@ -25,6 +25,9 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
 - **Tab menu** (right-click a tab): duplicate the session, open SFTP (SSH), reconnect, copy password, rename the tab,
   tab colour, change the connection's icon, show it in the tree, close / close other tabs. Tab title and colour last
   for the session only.
+- **Drag tabs** sideways to reorder them; pull a tab away from the tab strip (or out of the window) and let go to
+  open it in its own window — the session keeps running. *Attach to main window* in that window's header puts it
+  back; closing the window closes the session. The tab menu also has *Detach to window*.
 - **Custom icons**: right-click a connection or folder → *Change icon…* to pick one of 22 built-in glyphs (server,
   database, cloud, firewall, …) and a colour. Re-importing keeps the icons you chose.
 - **Import from Royal TSX / Royal TS** (`.rtsz`): folders, SSH and RDP connections, hosts, ports, users and key

@@ -54,7 +54,7 @@ public sealed class SessionHost : UserControl
         }
 
         _tab = DataContext as SessionTabViewModel;
-        _root.Children.Clear();
+        ReleaseSurface();
         switch (_tab)
         {
             case TerminalTabViewModel terminal:
@@ -76,6 +76,29 @@ public sealed class SessionHost : UserControl
         }
 
         Refresh();
+    }
+
+    /// <summary>Lets go of the session (its window closed or it moved back to the tabs) so the discarded surface
+    /// stops listening to it. The session itself is not touched.</summary>
+    public void Release()
+    {
+        if (_tab is not null)
+        {
+            _tab.PropertyChanged -= OnTabChanged;
+            _tab = null;
+        }
+
+        ReleaseSurface();
+    }
+
+    private void ReleaseSurface()
+    {
+        foreach (var terminal in _root.Children.OfType<TerminalControl>())
+        {
+            terminal.Tab = null; // unhooks it from the emulator's Changed event
+        }
+
+        _root.Children.Clear();
     }
 
     private void OnTabChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
