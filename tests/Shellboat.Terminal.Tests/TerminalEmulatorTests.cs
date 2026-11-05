@@ -137,4 +137,21 @@ public class TerminalEmulatorTests
         Assert.Equal(0x080808u, TerminalPalette.Rgb(232));
         Assert.Equal(0xEEEEEEu, TerminalPalette.Rgb(255));
     }
+
+    /// <summary>Pins the vendored TerminalOptions.Scrollback setter (NOTICE.md): history is capped at the option.</summary>
+    [Theory]
+    [InlineData(150)]
+    [InlineData(2000)]
+    public void Scrollback_length_follows_the_option(int scrollback)
+    {
+        var t = new TerminalEmulator(20, 5, scrollback);
+        for (var i = 0; i < 3000; i++)
+        {
+            t.Feed($"line {i}\r\n");
+        }
+
+        t.ScrollView(-100_000);
+
+        Assert.Equal(scrollback, t.Snapshot().ScrollOffset);
+    }
 }

@@ -5,7 +5,7 @@
              x:DataType="vm:RdpTabViewModel">
   <!-- The remote resolution is measured from this Grid, which has its size even before the session is up
        (the remote DPI is locked at connect time) — same reasoning as RDPilot's viewport. -->
-  <Grid Name="ViewportHost" Background="#0F1115">
+  <Grid Name="ViewportHost" Background="{DynamicResource Bg.Viewport}">
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <!-- FreeRDP never draws the pointer into the framebuffer; the remote cursor arrives out of band. -->
       <Image Name="RdpImage"

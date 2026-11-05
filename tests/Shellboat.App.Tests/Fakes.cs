@@ -69,6 +69,15 @@ internal sealed class FakeDialogs : IDialogService
         return Task.CompletedTask;
     }
 
+    /// <summary>Applied to the settings editor before "saving"; null = the user cancels.</summary>
+    public Action<SettingsViewModel>? SettingsChoice { get; set; }
+
+    public Task<bool> EditSettingsAsync(SettingsViewModel settings)
+    {
+        SettingsChoice?.Invoke(settings);
+        return Task.FromResult(SettingsChoice is not null);
+    }
+
     /// <summary>Stands in for the user copying something themselves.</summary>
     public void UserCopies(string text) => Clipboard = text;
 

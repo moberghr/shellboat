@@ -6,6 +6,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
+using Shellboat.App.Services;
 using Shellboat.App.Terminal;
 using Shellboat.App.ViewModels;
 using Shellboat.Terminal;
@@ -36,17 +37,22 @@ public sealed class TerminalControl : Control
     private TerminalSnapshot? _lastSnapshot;
     private (int Row, int Col)? _selAnchor;
     private (int Row, int Col)? _selEnd;
-    private Color _background = Color.Parse("#0F1319");
-    private Color _foreground = Color.Parse("#D8DEE6");
-    private Color _cursorColor = Color.Parse("#35D0BE");
-    private Color _selectionColor = Color.Parse("#5535D0BE");
+    private const string FallbackFonts = "JetBrains Mono,Cascadia Mono,Cascadia Code,Menlo,Consolas,DejaVu Sans Mono,monospace";
+    private TerminalTheme _theme = TerminalTheme.Dark;
+    private Color _background;
+    private Color _foreground;
+    private Color _cursorColor;
+    private Color _selectionColor;
+    private SettingsService? _settings;
 
     public TerminalControl()
     {
         Focusable = true;
         ClipToBounds = true;
         Cursor = new Cursor(StandardCursorType.Ibeam);
+        ApplyTheme();
         UpdateFont();
+        ActualThemeVariantChanged += (_, _) => ApplyTheme();
     }
 
     public TerminalTabViewModel? Tab
@@ -77,6 +83,21 @@ public sealed class TerminalControl : Control
                 _emulator.Changed += OnEmulatorChanged;
             }
 
+            if (_settings is not null)
+            {
+                _settings.PropertyChanged -= OnSettingsChanged;
+            }
+
+            _settings = Tab?.Settings;
+            if (_settings is not null)
+            {
+                _settings.PropertyChanged += OnSettingsChanged;
+                FontSize = _settings.Current.TerminalFontSize;
+            }
+
+            ApplyTheme();
+            UpdateFont();
+
             ClearSelection();
             ResizeGrid(Bounds.Size);
             InvalidateVisual();
@@ -91,26 +112,7 @@ public sealed class TerminalControl : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        if (this.TryFindResource("Terminal.Background", out var bg) && bg is Color b)
-        {
-            _background = b;
-        }
-
-        if (this.TryFindResource("Terminal.Foreground", out var fg) && fg is Color f)
-        {
-            _foreground = f;
-        }
-
-        if (this.TryFindResource("Terminal.Cursor", out var cur) && cur is Color c)
-        {
-            _cursorColor = c;
-        }
-
-        if (this.TryFindResource("Terminal.Selection", out var sel) && sel is Color s)
-        {
-            _selectionColor = s;
-        }
-
+        ApplyTheme();
         UpdateFont();
         Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
     }
@@ -121,11 +123,37 @@ public sealed class TerminalControl : Control
         ResizeGrid(e.NewSize);
     }
 
+    private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_settings is null || e.PropertyName != nameof(SettingsService.Current))
+        {
+            return;
+        }
+
+        FontSize = _settings.Current.TerminalFontSize; // re-measures via OnPropertyChanged when it changed
+        ApplyTheme();
+        UpdateFont();
+        ResizeGrid(Bounds.Size);
+        InvalidateVisual();
+    }
+
+    /// <summary>Colours from Settings → Terminal colours (app theme or forced light/dark) and the optional custom
+    /// background.</summary>
+    private void ApplyTheme()
+    {
+        var mode = _settings?.Current.TerminalColors ?? Core.Settings.TerminalColorMode.FollowTheme;
+        _theme = TerminalTheme.Resolve(mode, ActualThemeVariant != Avalonia.Styling.ThemeVariant.Light, _settings?.Current.TerminalBackground);
+        _background = FromRgb(_theme.Background);
+        _foreground = FromRgb(_theme.Foreground);
+        _cursorColor = FromRgb(_theme.Cursor);
+        _selectionColor = Color.FromUInt32(_theme.Selection);
+        InvalidateVisual();
+    }
+
     private void UpdateFont()
     {
-        var family = this.TryFindResource("MonoFontFamily", out var f) && f is FontFamily ff
-            ? ff
-            : new FontFamily("Menlo,Consolas,DejaVu Sans Mono,monospace");
+        var custom = _settings?.Current.TerminalFontFamily;
+        var family = new FontFamily(custom is null ? FallbackFonts : $"{custom},{FallbackFonts}");
         _regular = new Typeface(family);
         _bold = new Typeface(family, FontStyle.Normal, FontWeight.Bold);
         var probe = new FormattedText("MMMMMMMMMM", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _regular, FontSize, Brushes.White);
@@ -247,9 +275,9 @@ public sealed class TerminalControl : Control
 
     private (Color Fg, Color Bg) Colors(TerminalCell cell)
     {
-        var fg = cell.Foreground == TerminalCell.DefaultColor ? _foreground : FromRgb(TerminalPalette.Rgb(
+        var fg = cell.Foreground == TerminalCell.DefaultColor ? _foreground : FromRgb(_theme.Rgb(
             cell.Style.HasFlag(CellStyle.Bold) && cell.Foreground < 8 ? cell.Foreground + 8 : cell.Foreground));
-        var bg = cell.Background == TerminalCell.DefaultColor ? _background : FromRgb(TerminalPalette.Rgb(cell.Background));
+        var bg = cell.Background == TerminalCell.DefaultColor ? _background : FromRgb(_theme.Rgb(cell.Background));
         if (cell.Style.HasFlag(CellStyle.Inverse))
         {
             (fg, bg) = (bg, fg);
@@ -387,7 +415,7 @@ public sealed class TerminalControl : Control
             e.Pointer.Capture(this);
             InvalidateVisual();
         }
-        else if (point.Properties.IsRightButtonPressed)
+        else if (point.Properties.IsRightButtonPressed && _settings?.Current.RightClickPaste != false)
         {
             // Right click pastes, like PuTTY / Ásbrú.
             _ = PasteAsync();
@@ -408,7 +436,7 @@ public sealed class TerminalControl : Control
     {
         base.OnPointerReleased(e);
         e.Pointer.Capture(null);
-        if (Selection() is not null)
+        if (Selection() is not null && _settings?.Current.CopyOnSelect != false)
         {
             // Copy-on-select, the convention every Linux terminal user (and Ásbrú) expects.
             await CopySelectionAsync();

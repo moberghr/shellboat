@@ -41,8 +41,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         FileChannelFactory fileFactory,
         ICredentialImporter importer,
         Func<string, CancellationToken, Task<RoyalImportResult>>? royalReader = null,
-        Func<string, CancellationToken, Task<AsbruImportResult>>? asbruReader = null)
+        Func<string, CancellationToken, Task<AsbruImportResult>>? asbruReader = null,
+        SettingsService? settings = null)
     {
+        Settings = settings ?? new SettingsService();
         _royalReader = royalReader ?? RoyalTsImporter.ReadFileAsync;
         _asbruReader = asbruReader ?? AsbruImporter.ReadFileAsync;
         Tree = tree;
@@ -61,6 +63,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public ConnectionTreeViewModel Tree { get; }
 
+    /// <summary>Live preferences (theme, terminal, shortcuts, confirmations).</summary>
+    public SettingsService Settings { get; }
+
     public ObservableCollection<SessionTabViewModel> Tabs { get; } = [];
 
     public bool HasTabs => Tabs.Count > 0;
@@ -78,7 +83,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private SessionTabViewModel NewSessionTab(ConnectionEntry entry) => entry.Kind == ConnectionKind.Rdp
         ? new RdpTabViewModel(entry, _credentials, _dialogs)
-        : new TerminalTabViewModel(entry, _shellFactory, _credentials, _dialogs);
+        : new TerminalTabViewModel(entry, _shellFactory, _credentials, _dialogs, Settings);
 
     private SftpTabViewModel NewSftpTab(ConnectionEntry entry) => new(entry, _fileFactory, _credentials, _dialogs);
 
@@ -95,7 +100,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>How long a copied password stays on the clipboard before it is wiped.</summary>
-    public TimeSpan PasswordClipboardLifetime { get; init; } = TimeSpan.FromSeconds(30);
+    /// <summary>Settings → Sessions; tests pin it with an init value.</summary>
+    public TimeSpan PasswordClipboardLifetime
+    {
+        get => _passwordClipboardLifetime ?? TimeSpan.FromSeconds(Settings.Current.PasswordClipboardSeconds);
+        init => _passwordClipboardLifetime = value;
+    }
+
+    private readonly TimeSpan? _passwordClipboardLifetime;
 
     /// <summary>The pending clipboard wipe of the last copied password (awaited by tests).</summary>
     internal Task PendingClipboardClear { get; private set; } = Task.CompletedTask;
@@ -137,22 +149,47 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task OpenTabAsync(SessionTabViewModel tab)
     {
-        tab.CloseRequested += async (_, _) => await CloseTabAsync(tab);
+        // The session ended by itself (`exit`, server closed it): no "are you sure?".
+        tab.CloseRequested += async (_, _) => await EndSessionAsync(tab);
         Tabs.Add(tab);
         SelectedTab = tab;
         await tab.ConnectAsync();
     }
 
-    /// <summary>Closes a tab wherever it lives: in the tab strip or in its own (detached) window.</summary>
+    /// <summary>The user closes a tab (✕, menu, shortcut): asks first when it is still connected and Settings say
+    /// so, then ends it wherever it lives (tab strip or detached window).</summary>
     [RelayCommand]
     private async Task CloseTabAsync(SessionTabViewModel? tab)
     {
-        if (tab is null || !(RemoveFromStrip(tab) || DetachedTabs.Remove(tab)))
+        if (tab is not null && await ConfirmCloseAsync([tab]))
+        {
+            await EndSessionAsync(tab);
+        }
+    }
+
+    /// <summary>Ends a session without asking: disposes it and removes its tab or window entry.</summary>
+    public async Task EndSessionAsync(SessionTabViewModel tab)
+    {
+        if (!(RemoveFromStrip(tab) || DetachedTabs.Remove(tab)))
         {
             return;
         }
 
         await tab.DisposeAsync();
+    }
+
+    /// <summary>True when closing these may go ahead: nothing is connected, Settings don't ask, or the user said
+    /// yes. One question for any number of sessions.</summary>
+    public async Task<bool> ConfirmCloseAsync(IReadOnlyCollection<SessionTabViewModel> tabs)
+    {
+        var live = tabs.Where(t => t.IsConnected).ToList();
+        if (live.Count == 0 || !Settings.Current.ConfirmCloseLiveSessions)
+        {
+            return true;
+        }
+
+        var what = live.Count == 1 ? $"\"{live[0].Title}\" is still connected." : $"{live.Count} sessions are still connected.";
+        return await _dialogs.ConfirmAsync("Close session", $"{what} Close anyway?", live.Count == 1 ? "Close" : "Close all");
     }
 
     /// <summary>Takes a tab out of the strip (session untouched) and selects its neighbour. False if it isn't there.</summary>

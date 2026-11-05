@@ -20,6 +20,10 @@ public sealed class DialogService : IDialogService
     private static Window? Owner =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
+    /// <summary>The focused window (a detached session window counts), else the main window.</summary>
+    private static Window? ActiveOwner =>
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Windows.FirstOrDefault(w => w.IsActive) ?? Owner;
+
     public Task<SecretPromptResult?> PromptSecretAsync(string title, string message, bool canRemember) => OnUi(async () =>
     {
         var box = new TextBox { PasswordChar = '•', MinWidth = 320 };
@@ -114,6 +118,12 @@ public sealed class DialogService : IDialogService
     {
         var window = new ConnectionEditorWindow { DataContext = editor };
         return Owner is { } owner ? await window.ShowDialog<bool>(owner) : false;
+    });
+
+    public Task<bool> EditSettingsAsync(SettingsViewModel settings) => OnUi(async () =>
+    {
+        var window = new SettingsWindow { DataContext = settings };
+        return ActiveOwner is { } owner ? await window.ShowDialog<bool>(owner) : false;
     });
 
     public Task<bool> PickIconAsync(IconPickerViewModel picker) => OnUi(async () =>

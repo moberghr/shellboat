@@ -69,6 +69,42 @@ public sealed class DetachedSessionWindow : Window
         root.Children.Add(bar);
         root.Children.Add(_host);
         Content = root;
+        AddHandler(KeyDownEvent, OnShortcutKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        _menu = new MainMenu(_vm, () => Tab, OperatingSystem.IsMacOS(), () => _vm.QuitFromMenu?.Invoke());
+        NativeMenu.SetMenu(this, _menu.Menu);
+    }
+
+    private readonly MainMenu _menu;
+
+    /// <summary>Same main menu as the main window, acting on this window's session; updated in place.</summary>
+    public void RefreshMenu() => _menu.Refresh();
+
+    private async void OnShortcutKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (_vm.Settings.Shortcuts.Match(e.Key, e.KeyModifiers) is { } action)
+        {
+            e.Handled = true;
+            await _vm.RunActionAsync(action, Tab);
+        }
+    }
+
+    private bool _closeApproved;
+
+    /// <summary>Closing the window ends its session: ask first when it is connected (Settings).</summary>
+    protected override async void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+        if (Released || _closeApproved || _vm.QuitApproved || !_vm.NeedsCloseConfirmation([Tab]))
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (await _vm.ConfirmCloseAsync([Tab]))
+        {
+            _closeApproved = true;
+            Close();
+        }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -77,7 +113,7 @@ public sealed class DetachedSessionWindow : Window
         _host.Release();
         if (!Released)
         {
-            _vm.CloseTabCommand.Execute(Tab); // the user closed the window: end the session
+            _ = _vm.EndSessionAsync(Tab); // the window is gone (confirmed in OnClosing): end the session
         }
     }
 

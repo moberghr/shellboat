@@ -33,6 +33,9 @@ public sealed partial class ConnectionTreeViewModel : ObservableObject
 
     public ObservableCollection<TreeNodeViewModel> Roots { get; } = [];
 
+    /// <summary>No connections saved at all (folders alone don't count) — the pane offers Import then.</summary>
+    public bool HasNoConnections => Document.Connections.Count == 0;
+
     public async Task LoadAsync(CancellationToken ct)
     {
         Document = await _store.LoadAsync(ct);
@@ -207,6 +210,7 @@ public sealed partial class ConnectionTreeViewModel : ObservableObject
         }
 
         Selected = keepSelected is { } k ? All(Roots).FirstOrDefault(n => n.Id == k) : null;
+        OnPropertyChanged(nameof(HasNoConnections));
     }
 
     private List<TreeNodeViewModel> BuildLevel(Guid? parent, bool filtering)

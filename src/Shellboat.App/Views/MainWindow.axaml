@@ -9,11 +9,10 @@
         Width="1280" Height="800" MinWidth="720" MinHeight="420"
         Background="{DynamicResource Bg.Window}">
 
-  <Window.KeyBindings>
-    <KeyBinding Gesture="Ctrl+N" Command="{Binding NewConnectionCommand}"/>
-  </Window.KeyBindings>
-
   <DockPanel>
+    <!-- The main menu: shown here on Windows/Linux; on macOS it lives in the system menu bar and this is empty. -->
+    <NativeMenuBar DockPanel.Dock="Top"/>
+
     <!-- Status bar -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10,3">
       <TextBlock Text="{Binding StatusText}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
@@ -21,22 +20,47 @@
 
     <Grid ColumnDefinitions="280,4,*">
       <!-- ============ Left: connection tree ============ -->
-      <DockPanel Grid.Column="0" Background="{DynamicResource Bg.Chrome}">
-        <StackPanel DockPanel.Dock="Top" Margin="8,8,8,4" Spacing="6">
-          <StackPanel Orientation="Horizontal" Spacing="2">
-            <Button Classes="Toolbar" Content="+ Connection" Command="{Binding NewConnectionCommand}" ToolTip.Tip="New connection (Ctrl+N)"/>
-            <Button Classes="Toolbar" Content="+ Folder" Command="{Binding NewFolderCommand}"/>
-            <Button Classes="Toolbar" Content="Import ▾">
-              <Button.Flyout>
-                <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                  <MenuItem Header="From Royal TSX / Royal TS (.rtsz)…" Command="{Binding ImportRoyalCommand}"/>
-                  <MenuItem Header="From Ásbrú Connection Manager (.yml)…" Command="{Binding ImportAsbruCommand}"/>
-                  <MenuItem Header="From KeePass (.kdbx)…" Command="{Binding ImportKeePassCommand}"/>
-                </MenuFlyout>
-              </Button.Flyout>
-            </Button>
-          </StackPanel>
-          <TextBox Text="{Binding Tree.Filter}" PlaceholderText="Filter connections…"/>
+      <DockPanel Grid.Column="0" Background="{DynamicResource Bg.Chrome}" ClipToBounds="True">
+        <Grid DockPanel.Dock="Top" Margin="4,8,8,4" ColumnDefinitions="Auto,*">
+          <TextBox Grid.Column="1" Name="FilterBox" Text="{Binding Tree.Filter}" PlaceholderText="Filter connections…"/>
+          <Button Grid.Column="0" Classes="Toolbar" Margin="0,0,2,0" VerticalAlignment="Center" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings" Padding="7,5">
+            <PathIcon Width="15" Height="15" Data="{StaticResource Glyph.gear}" Foreground="{DynamicResource Text.Muted}"/>
+          </Button>
+        </Grid>
+
+        <!-- Footer: the two add buttons (Settings sits beside the filter). Import lives in the menu (and the empty state below). -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="6,4">
+          <WrapPanel Orientation="Horizontal">
+              <Button Classes="Toolbar" Command="{Binding NewConnectionCommand}" ToolTip.Tip="New connection">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Width="15" Height="15" Data="{StaticResource Icon.NewConnection}" Foreground="{DynamicResource Accent.Brand}"/>
+                  <TextBlock Text="Connection" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+              <Button Classes="Toolbar" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Width="15" Height="15" Data="{StaticResource Icon.NewFolder}" Foreground="{DynamicResource Accent.Brand}"/>
+                  <TextBlock Text="Folder" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+            </WrapPanel>
+        </Border>
+
+        <Grid>
+        <!-- Empty state: only while nothing is saved yet. -->
+        <StackPanel IsVisible="{Binding Tree.HasNoConnections}" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Margin="16" Spacing="10">
+          <TextBlock Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="No connections yet. Add one below, or bring them over from another app."/>
+          <Button HorizontalAlignment="Center" Content="Import connections ▾">
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                <MenuItem Header="From Royal TSX / Royal TS (.rtsz)…" Command="{Binding ImportRoyalCommand}"/>
+                <MenuItem Header="From Ásbrú Connection Manager (.yml)…" Command="{Binding ImportAsbruCommand}"/>
+                <MenuItem Header="From KeePass (.kdbx)…" Command="{Binding ImportKeePassCommand}"/>
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
         </StackPanel>
 
         <TreeView Name="ConnectionTree"
@@ -82,6 +106,7 @@
             </TreeDataTemplate>
           </TreeView.ItemTemplate>
         </TreeView>
+        </Grid>
       </DockPanel>
 
       <GridSplitter Grid.Column="1" Background="{DynamicResource Border}" ResizeDirection="Columns"/>
@@ -90,7 +115,7 @@
       <Grid Grid.Column="2">
         <TextBlock IsVisible="{Binding !HasTabs}" HorizontalAlignment="Center" VerticalAlignment="Center"
                    TextAlignment="Center" Classes="Caption"
-                   Text="Double-click a connection to open it.&#10;Ctrl+N adds one; Import pulls them from Royal TSX, Ásbrú or KeePass."/>
+                   Text="Double-click a connection to open it.&#10;Connection (bottom left) adds one; File → Import pulls them from Royal TSX, Ásbrú or KeePass."/>
 
         <TabControl Name="SessionTabs" IsVisible="{Binding HasTabs}" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}" Padding="0">
           <TabControl.ItemTemplate>
@@ -121,7 +146,7 @@
                     <MenuItem Header="Detach to window" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DetachTabCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Show in connection tree" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ShowTabInTreeCommand}" CommandParameter="{Binding}"/>
                     <Separator/>
-                    <MenuItem Header="Close" Command="{Binding CloseCommand}"/>
+                    <MenuItem Header="Close" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseTabCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Close other tabs" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseOtherTabsCommand}" CommandParameter="{Binding}"/>
                   </ContextMenu>
                 </Grid.ContextMenu>
@@ -133,7 +158,7 @@
                   <Ellipse Width="7" Height="7" Fill="{DynamicResource Ok.Green}" IsVisible="{Binding IsConnected}"/>
                   <Ellipse Width="7" Height="7" Fill="{DynamicResource Error.Red}" IsVisible="{Binding !IsConnected}"/>
                   <TextBlock Text="{Binding Title}" FontSize="13" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                  <Button Content="✕" Padding="4,0" FontSize="11" Background="Transparent" Command="{Binding CloseCommand}" ToolTip.Tip="Close"/>
+                  <Button Content="✕" Padding="4,0" FontSize="11" Background="Transparent" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseTabCommand}" CommandParameter="{Binding}" ToolTip.Tip="Close"/>
                 </StackPanel>
               </Grid>
             </DataTemplate>

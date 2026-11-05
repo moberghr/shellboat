@@ -140,9 +140,15 @@ public sealed partial class MainWindowViewModel
     [RelayCommand]
     private async Task CloseOtherTabsAsync(SessionTabViewModel? tab)
     {
-        foreach (var other in Tabs.Where(t => !ReferenceEquals(t, tab)).ToList())
+        var others = Tabs.Where(t => !ReferenceEquals(t, tab)).ToList();
+        if (!await ConfirmCloseAsync(others))
         {
-            await CloseTabAsync(other);
+            return;
+        }
+
+        foreach (var other in others)
+        {
+            await EndSessionAsync(other);
         }
     }
 

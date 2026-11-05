@@ -1,0 +1,357 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Shellboat.App.ViewModels"
+        xmlns:c="using:Shellboat.App.Controls"
+        x:Class="Shellboat.App.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings"
+        Width="720" Height="600" MinWidth="600" MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Bg.Window}">
+  <Window.Styles>
+    <!-- Tab bar: icon over label, selected = tinted pill with the accent icon. -->
+    <Style Selector="ListBox.Tabs">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ListBox.Tabs ListBoxItem">
+      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="Margin" Value="3,0"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="MinWidth" Value="92"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ListBox.Tabs ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Bg.Select}"/>
+    </Style>
+    <Style Selector="ListBox.Tabs ListBoxItem PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+    </Style>
+    <Style Selector="ListBox.Tabs ListBoxItem:selected PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource Accent.Brand}"/>
+    </Style>
+
+    <!-- Cards and rows -->
+    <Style Selector="TextBlock.SectionHeader">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+      <Setter Property="Margin" Value="4,0,0,6"/>
+    </Style>
+    <Style Selector="Border.Card">
+      <Setter Property="Background" Value="{DynamicResource Bg.Chrome}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Margin" Value="0,0,0,18"/>
+    </Style>
+    <Style Selector="Border.Divider">
+      <Setter Property="Height" Value="1"/>
+      <Setter Property="Background" Value="{DynamicResource Border}"/>
+      <Setter Property="Margin" Value="14,0"/>
+    </Style>
+    <Style Selector="Grid.Row">
+      <Setter Property="Margin" Value="14,10"/>
+      <Setter Property="MinHeight" Value="34"/>
+    </Style>
+    <Style Selector="TextBlock.RowTitle">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.RowHint">
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text.Dim}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="Margin" Value="0,2,12,0"/>
+    </Style>
+    <Style Selector="ToggleSwitch">
+      <Setter Property="OnContent" Value=""/>
+      <Setter Property="OffContent" Value=""/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+
+    <!-- Theme tiles: the selected tile gets an accent outline. -->
+    <Style Selector="ListBox.Tiles">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.Tiles ListBoxItem">
+      <Setter Property="Padding" Value="6"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="CornerRadius" Value="10"/>
+    </Style>
+    <Style Selector="ListBox.Tiles ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.Tiles ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.Preview">
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="ListBox.Tiles ListBoxItem:selected Border.Preview">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent.Brand}"/>
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <!-- A shortcut shown as a key cap you click to record. -->
+    <Style Selector="Button.Keycap">
+      <Setter Property="MinWidth" Value="150"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="Background" Value="{DynamicResource Bg.Window}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1,1,1,2"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Padding" Value="10,4"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Button.Small">
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+    <!-- ============ Tab bar ============ -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="0,10">
+      <ListBox Classes="Tabs" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal"/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:SettingsSection">
+            <StackPanel Spacing="5">
+              <PathIcon Width="20" Height="20" HorizontalAlignment="Center"
+                        Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"/>
+              <TextBlock Text="{Binding Label}" FontSize="12" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <!-- ============ Footer ============ -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="16,10">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+          <Button Content="Cancel" Click="OnCancel" IsCancel="True"/>
+          <Button Content="Save" Click="OnSave" IsDefault="True" Classes="accent" IsEnabled="{Binding CanSave}"/>
+        </StackPanel>
+        <TextBlock Text="{Binding ShortcutProblem}" Foreground="{DynamicResource Error.Red}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer>
+      <Panel Margin="24,20,24,6">
+
+        <!-- ============ Appearance ============ -->
+        <StackPanel IsVisible="{Binding ShowAppearance}">
+          <TextBlock Classes="SectionHeader" Text="THEME"/>
+          <Border Classes="Card" Padding="10">
+            <ListBox Classes="Tiles" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ThemeOption">
+                  <StackPanel Spacing="6">
+                    <Border Classes="Preview" Width="132" Height="80" CornerRadius="8" ClipToBounds="True">
+                      <Grid ColumnDefinitions="*,*">
+                        <Border Background="{Binding LeftBg, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                        <Border Grid.Column="1" Background="{Binding RightBg, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                        <!-- a sketch of the window: tree lines on the left, a prompt on the right -->
+                        <StackPanel Margin="9,10,0,0" Spacing="5">
+                          <Border Width="34" Height="4" CornerRadius="2" HorizontalAlignment="Left" Opacity="0.75"
+                                  Background="{Binding LeftText, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                          <Border Width="26" Height="4" CornerRadius="2" HorizontalAlignment="Left" Opacity="0.5"
+                                  Background="{Binding LeftText, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                          <Border Width="30" Height="4" CornerRadius="2" HorizontalAlignment="Left" Opacity="0.5"
+                                  Background="{Binding LeftText, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="9,10,0,0" Spacing="5">
+                          <Border Width="40" Height="4" CornerRadius="2" HorizontalAlignment="Left" Background="{DynamicResource Accent.Brand}"/>
+                          <Border Width="30" Height="4" CornerRadius="2" HorizontalAlignment="Left" Opacity="0.6"
+                                  Background="{Binding RightText, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                    <TextBlock Text="{Binding Label}" FontSize="12" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <TextBlock Classes="SectionHeader" Text="TERMINAL"/>
+          <Border Classes="Card">
+            <StackPanel>
+            <Grid Classes="Row" ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="RowTitle" Text="Terminal colours"/>
+                <TextBlock Classes="RowHint" Text="Keep a dark terminal in a light app, or the other way round."/>
+              </StackPanel>
+              <ComboBox Grid.Column="1" Width="220" VerticalAlignment="Center" ItemsSource="{Binding TerminalColorModes}"
+                        SelectedValue="{Binding TerminalColors}" SelectedValueBinding="{Binding Value}" DisplayMemberBinding="{Binding Label}"/>
+            </Grid>
+            <Border Classes="Divider"/>
+            <Grid Classes="Row" ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="RowTitle" Text="Custom background"/>
+                <TextBlock Classes="RowHint" TextWrapping="Wrap"
+                           Text="Paint the terminal in your own colour. Text colours follow it: light text on a dark background, dark on a light one."/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <ColorPicker Color="{Binding TerminalBackgroundColor}" IsEnabled="{Binding UseCustomTerminalBackground}"
+                             IsAlphaEnabled="False" IsAlphaVisible="False"/>
+                <ToggleSwitch IsChecked="{Binding UseCustomTerminalBackground}" OnContent="" OffContent=""/>
+              </StackPanel>
+            </Grid>
+            <ItemsControl Margin="14,0,14,12" ItemsSource="{Binding BackgroundPresets}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BackgroundPreset">
+                  <Button Margin="0,0,8,0" Padding="4" Background="Transparent" ToolTip.Tip="{Binding Hex}"
+                          Command="{Binding $parent[Window].((vm:SettingsViewModel)DataContext).ApplyBackgroundPresetCommand}" CommandParameter="{Binding}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Border Width="16" Height="16" CornerRadius="4" BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                              Background="{Binding Hex, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                      <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ============ Terminal ============ -->
+        <StackPanel IsVisible="{Binding ShowTerminal}">
+          <TextBlock Classes="SectionHeader" Text="FONT"/>
+          <Border Classes="Card">
+            <StackPanel>
+              <Grid Classes="Row" ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Classes="RowTitle" Text="Font family"/>
+                  <TextBlock Classes="RowHint" Text="Empty uses JetBrains Mono, Menlo or Consolas, whichever is installed."/>
+                </StackPanel>
+                <AutoCompleteBox Grid.Column="1" Width="240" VerticalAlignment="Center" Text="{Binding TerminalFontFamily}"
+                                 ItemsSource="{Binding FontSuggestions}" FilterMode="ContainsOrdinal" PlaceholderText="Default"/>
+              </Grid>
+              <Border Classes="Divider"/>
+              <Grid Classes="Row" ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Classes="RowTitle" Text="Font size"/>
+                  <TextBlock Classes="RowHint" Text="Also View → Bigger / Smaller Terminal Font."/>
+                </StackPanel>
+                <NumericUpDown Grid.Column="1" Width="130" VerticalAlignment="Center" Increment="1" FormatString="0"
+                               Minimum="{Binding MinFontSize}" Maximum="{Binding MaxFontSize}" Value="{Binding TerminalFontSize}"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="SectionHeader" Text="BEHAVIOUR"/>
+          <Border Classes="Card">
+            <StackPanel>
+              <Grid Classes="Row" ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Classes="RowTitle" Text="Copy on select"/>
+                  <TextBlock Classes="RowHint" Text="Selecting text with the mouse copies it, like most Linux terminals."/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding CopyOnSelect}"/>
+              </Grid>
+              <Border Classes="Divider"/>
+              <Grid Classes="Row" ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Classes="RowTitle" Text="Right-click pastes"/>
+                  <TextBlock Classes="RowHint" Text="Like PuTTY and Ásbrú."/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RightClickPaste}"/>
+              </Grid>
+              <Border Classes="Divider"/>
+              <Grid Classes="Row" ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Classes="RowTitle" Text="Scrollback"/>
+                  <TextBlock Classes="RowHint" Text="Lines of history per terminal. Applies to terminals opened after saving."/>
+                </StackPanel>
+                <NumericUpDown Grid.Column="1" Width="130" VerticalAlignment="Center" Increment="1000" FormatString="0"
+                               Minimum="{Binding MinScrollback}" Maximum="{Binding MaxScrollback}" Value="{Binding ScrollbackLines}"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ============ Keyboard ============ -->
+        <StackPanel IsVisible="{Binding ShowKeyboard}">
+          <DockPanel Margin="0,0,0,8">
+            <Button DockPanel.Dock="Right" Classes="Small" Content="Reset all to defaults" Command="{Binding ResetAllShortcutsCommand}"/>
+            <TextBlock Classes="RowHint" VerticalAlignment="Center"
+                       Text="Click a shortcut and press the new keys. Esc cancels, Backspace removes it."/>
+          </DockPanel>
+          <Border Classes="Card">
+            <ItemsControl ItemsSource="{Binding Shortcuts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ShortcutRowViewModel">
+                  <StackPanel>
+                    <Grid Classes="Row" ColumnDefinitions="*,Auto,Auto,Auto" Margin="14,6">
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock Classes="RowTitle" Text="{Binding Label}"/>
+                        <TextBlock Classes="RowHint" Text="{Binding Problem}" Foreground="{DynamicResource Warn.Amber}"
+                                   IsVisible="{Binding Problem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="Keycap" VerticalAlignment="Center" Content="{Binding Display}"
+                              Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RecordCommand}" CommandParameter="{Binding}"/>
+                      <Button Grid.Column="2" Classes="Small" Content="Clear" Margin="6,0,0,0" VerticalAlignment="Center"
+                              ToolTip.Tip="No shortcut"
+                              Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnbindCommand}" CommandParameter="{Binding}"/>
+                      <Button Grid.Column="3" Classes="Small" Content="Default" VerticalAlignment="Center" IsEnabled="{Binding !IsDefault}"
+                              Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).ResetShortcutCommand}" CommandParameter="{Binding}"/>
+                    </Grid>
+                    <Border Classes="Divider"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+
+        <!-- ============ Sessions ============ -->
+        <StackPanel IsVisible="{Binding ShowSessions}">
+          <TextBlock Classes="SectionHeader" Text="CLOSING"/>
+          <Border Classes="Card">
+            <Grid Classes="Row" ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="RowTitle" Text="Ask before closing live sessions"/>
+                <TextBlock Classes="RowHint" Text="When a tab, a detached window or Shellboat closes while still connected. A session that ends by itself never asks."/>
+              </StackPanel>
+              <ToggleSwitch Grid.Column="1" IsChecked="{Binding ConfirmCloseLiveSessions}"/>
+            </Grid>
+          </Border>
+
+          <TextBlock Classes="SectionHeader" Text="PASSWORDS"/>
+          <Border Classes="Card">
+            <Grid Classes="Row" ColumnDefinitions="*,Auto,Auto">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="RowTitle" Text="Clear copied password after"/>
+                <TextBlock Classes="RowHint" Text="Copy password wipes the clipboard after this long, unless you copied something else since."/>
+              </StackPanel>
+              <NumericUpDown Grid.Column="1" Width="110" VerticalAlignment="Center" Increment="5" FormatString="0"
+                             Minimum="{Binding MinClipboardSeconds}" Maximum="{Binding MaxClipboardSeconds}" Value="{Binding PasswordClipboardSeconds}"/>
+              <TextBlock Grid.Column="2" Classes="RowTitle" Text="seconds" Margin="8,0,0,0"/>
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Panel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

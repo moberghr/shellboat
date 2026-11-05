@@ -22,18 +22,22 @@ public sealed class TerminalTabViewModel : SessionTabViewModel
     private IShellChannel? _channel;
     private CancellationTokenSource? _connectCts;
 
-    public TerminalTabViewModel(ConnectionEntry connection, ShellChannelFactory channelFactory, CredentialResolver credentials, IDialogService dialogs)
+    public TerminalTabViewModel(ConnectionEntry connection, ShellChannelFactory channelFactory, CredentialResolver credentials, IDialogService dialogs, SettingsService? settings = null)
         : base(connection)
     {
         _channelFactory = channelFactory;
         _credentials = credentials;
         _dialogs = dialogs;
-        Emulator = new TerminalEmulator();
+        Settings = settings ?? new SettingsService();
+        Emulator = new TerminalEmulator(scrollback: Settings.Current.ScrollbackLines);
         Emulator.Output += bytes => _channel?.Write(bytes);
         Emulator.TitleChanged += title => Dispatcher.UIThread.Post(() => Title = string.IsNullOrWhiteSpace(title) ? Connection.Name : $"{Connection.Name} — {title}");
     }
 
     public TerminalEmulator Emulator { get; }
+
+    /// <summary>Font, colours and mouse behaviour for the terminal control (live; scrollback is read once).</summary>
+    public SettingsService Settings { get; }
 
     /// <summary>The terminal stays visible after a disconnect so its output can still be read and copied.</summary>
     public override bool IsOverlayVisible => State is SessionState.Connecting && _channel is null;

@@ -28,6 +28,12 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
 - **Drag tabs** sideways to reorder them; pull a tab away from the tab strip (or out of the window) and let go to
   open it in its own window — the session keeps running. *Attach to main window* in that window's header puts it
   back; closing the window closes the session. The tab menu also has *Detach to window*.
+- **Main menu** (macOS menu bar; in the window on Windows/Linux): File, Session, View, Help — every item shows its
+  shortcut.
+- **Settings** (⌘, / Ctrl+,): light, dark or follow-system theme; terminal colours (follow the theme or force
+  light/dark) or a custom background colour (picker + dark-gray presets; text colours adapt), font, size (also ⌘+ / ⌘− / ⌘0), scrollback, copy-on-select, right-click paste; how long a copied
+  password stays on the clipboard; ask before closing live sessions; and **rebindable keyboard shortcuts**
+  (click one, press the new keys). Stored in `settings.json` next to `connections.json` — no secrets.
 - **Custom icons**: right-click a connection or folder → *Change icon…* to pick one of 22 built-in glyphs (server,
   database, cloud, firewall, …) and a colour. Re-importing keeps the icons you chose.
 - **Import from Royal TSX / Royal TS** (`.rtsz`): folders, SSH and RDP connections, hosts, ports, users and key

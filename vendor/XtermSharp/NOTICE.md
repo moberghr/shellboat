@@ -14,3 +14,5 @@ Compiled into `src/Shellboat.Terminal` via `<Compile Include>`; `.editorconfig` 
   - `InputHandlers/InputHandler.cs` (Print): wide characters get width 2 via `Shellboat.Terminal.WideChars`
     (upstream hard-codes 1; its own `RuneHelper.ConsoleWidth` table lookup reads out of bounds). Combining marks deliberately stay width 1 — upstream's width-0 path adds the
     codepoints together, corrupting the previous cell.
+  - `TerminalOptions.cs`: `Scrollback` gets a setter (upstream: get-only, fixed at 1000 in the constructor) so the
+    scrollback length is a user setting. Pinned by `Scrollback_length_follows_the_option`.

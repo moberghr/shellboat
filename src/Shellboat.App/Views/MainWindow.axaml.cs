@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Shellboat.App.ViewModels;
 
@@ -21,6 +22,85 @@ public partial class MainWindow : Window
         ConnectionTree.KeyDown += OnTreeKeyDown;
         _ = new Controls.TreeDragController(ConnectionTree, () => Vm);
         _ = new Controls.TabDragController(SessionTabs, this, () => Vm, DetachAt);
+        // Tunnel: shortcuts win over the focused terminal, which would otherwise send the keys to the shell.
+        AddHandler(KeyDownEvent, OnShortcutKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    private async void OnShortcutKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (Vm is { } vm && vm.Settings.Shortcuts.Match(e.Key, e.KeyModifiers) is { } action)
+        {
+            e.Handled = true;
+            await vm.RunActionAsync(action);
+        }
+    }
+
+    private MainMenu? _menu;
+
+    private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // The native menu bridge throws on misuse, and an exception escaping here would abort the app (it runs
+        // inside async void command handlers): a stale menu label is far better than a crash.
+        try
+        {
+            RefreshMenus();
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            if (Vm is { } vm)
+            {
+                vm.StatusText = $"Menu not updated: {ex.Message}";
+            }
+        }
+    }
+
+    /// <summary>The window's menu shows current shortcuts and theme. Created once (see <see cref="MainMenu"/>),
+    /// refreshed in place afterwards; detached windows refresh theirs too.</summary>
+    private void RefreshMenus()
+    {
+        if (Vm is not { } vm)
+        {
+            return;
+        }
+
+        if (_menu is null)
+        {
+            _menu = new MainMenu(vm, () => null, OperatingSystem.IsMacOS(), Close);
+            NativeMenu.SetMenu(this, _menu.Menu);
+        }
+        else
+        {
+            _menu.Refresh();
+        }
+
+        foreach (var window in _detached.Values)
+        {
+            window.RefreshMenu();
+        }
+    }
+
+    private void OnFocusFilter(object? sender, EventArgs e)
+    {
+        Activate();
+        FilterBox.Focus();
+        FilterBox.SelectAll();
+    }
+
+    /// <summary>Closing the main window ends every session: ask first when some are connected (Settings).</summary>
+    protected override async void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+        if (Vm is not { } vm || vm.QuitApproved || !vm.NeedsCloseConfirmation(vm.AllSessions))
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (await vm.ConfirmCloseAsync(vm.AllSessions))
+        {
+            vm.QuitApproved = true;
+            Close();
+        }
     }
 
     private readonly Dictionary<SessionTabViewModel, DetachedSessionWindow> _detached = [];
@@ -33,13 +113,20 @@ public partial class MainWindow : Window
         if (_watched is not null)
         {
             _watched.DetachedTabs.CollectionChanged -= OnDetachedChanged;
+            _watched.Settings.PropertyChanged -= OnSettingsChanged;
+            _watched.FocusFilterRequested -= OnFocusFilter;
         }
 
         _watched = Vm;
         if (_watched is not null)
         {
             _watched.DetachedTabs.CollectionChanged += OnDetachedChanged;
+            _watched.Settings.PropertyChanged += OnSettingsChanged;
+            _watched.FocusFilterRequested += OnFocusFilter;
+            _watched.QuitFromMenu = Close;
         }
+
+        RefreshMenus();
     }
 
     /// <summary>A tab dropped outside the strip: its window opens under the pointer.</summary>

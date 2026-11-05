@@ -47,4 +47,24 @@ public class ConnectionTreeViewModelTests
         Assert.True(only.IsExpanded);
         Assert.Equal("db1", Assert.Single(only.Children).Title);
     }
+
+    [Fact]
+    public async Task Import_is_offered_only_while_no_connection_exists()
+    {
+        var tree = new ConnectionTreeViewModel(new MemoryConnectionStore(), new FakeSecrets());
+        var changes = new List<string?>();
+        tree.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        await tree.LoadAsync(default);
+        Assert.True(tree.HasNoConnections);
+
+        var folder = await tree.AddFolderAsync("Only a folder", null);
+        Assert.True(tree.HasNoConnections);
+
+        await tree.UpsertAsync(new ConnectionEntry { Id = Guid.NewGuid(), Name = "web", FolderId = folder.Id, Kind = ConnectionKind.Ssh, Host = "h" });
+        Assert.False(tree.HasNoConnections);
+        Assert.Contains(nameof(ConnectionTreeViewModel.HasNoConnections), changes);
+
+        await tree.DeleteFolderAsync(folder.Id);
+        Assert.True(tree.HasNoConnections);
+    }
 }

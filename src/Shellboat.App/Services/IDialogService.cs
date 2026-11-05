@@ -33,6 +33,9 @@ public interface IDialogService
 
     Task ShowKeePassImportAsync(KeePassImportViewModel import);
 
+    /// <returns>True when the user saved; the result is <see cref="SettingsViewModel.Build"/>.</returns>
+    Task<bool> EditSettingsAsync(SettingsViewModel settings);
+
     /// <returns>True when the user saved the picker's choice.</returns>
     Task<bool> PickIconAsync(IconPickerViewModel picker);
 

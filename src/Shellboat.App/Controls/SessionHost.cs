@@ -25,7 +25,6 @@ public sealed class SessionHost : UserControl
     {
         _overlay = new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#E6161B21")),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(24),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -35,11 +34,13 @@ public sealed class SessionHost : UserControl
         // For terminals the output stays readable after a disconnect, so the reconnect affordance is a slim bar.
         _bar = new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#2A323C")),
             Padding = new Thickness(10, 4),
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { _barText, _barReconnect } },
         };
+        // Theme-aware: DynamicResource-style bindings follow a Light/Dark switch while the session is open.
+        _overlay.Bind(Border.BackgroundProperty, _overlay.GetResourceObservable("Bg.Overlay"));
+        _bar.Bind(Border.BackgroundProperty, _bar.GetResourceObservable("Bg.TileActive"));
         _reconnect.Click += async (_, _) => await (_tab?.ConnectAsync() ?? Task.CompletedTask);
         _barReconnect.Click += async (_, _) => await (_tab?.ConnectAsync() ?? Task.CompletedTask);
         Content = _root;

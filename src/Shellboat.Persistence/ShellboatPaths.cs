@@ -30,6 +30,8 @@ public static class ShellboatPaths
 
     public static string ConnectionsFile => Path.Combine(ConfigDir, "connections.json");
 
+    public static string SettingsFile => Path.Combine(ConfigDir, "settings.json");
+
     public static string TrustFile => Path.Combine(ConfigDir, "known_hosts.json");
 
     internal enum PathPlatform { Linux, Windows, MacOS }

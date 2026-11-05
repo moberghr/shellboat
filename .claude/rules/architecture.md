@@ -27,3 +27,14 @@ rather than reaching for a mocking library.
 `NSDraggingSession` throws an Objective-C exception .NET can't catch — crash 2026-11-05). Moves inside the app use
 pointer capture (`Controls/TreeDragController`). Use OS drag-and-drop only when data really leaves the app, and then
 always include a platform format (text/file).
+
+## §2.7 — Settings, shortcuts, menu
+`AppSettings` (Core) ↔ `JsonSettingsStore` (settings.json, no secrets) ↔ `SettingsService` (App, live; raises
+`Current`/`Shortcuts` changes). Shortcuts: `Settings/ShortcutCatalog` (action ids are persisted — never rename;
+Windows/Linux defaults are Ctrl+Shift chords so plain Ctrl+letter reaches the shell) → `ShortcutMap`. Every key
+shortcut and menu item goes through `MainWindowViewModel.RunActionAsync(id, tab, source)`; windows catch keys in a
+**tunnel** handler so the focused terminal never sees them. The menu (`Views/MainMenu`) is a `NativeMenu` **built once per window and
+updated in place** (`Refresh`) — calling `NativeMenu.SetMenu` again with a new menu on a window whose menu is
+already exported throws in Avalonia.Native ("The menu being updated does not match") and aborts the app (crash
+2026-11-05). The macOS app menu must be set in `App.Initialize`, before any window; no top-level "Edit" menu (AppKit would claim ⌘C/⌘V). Colours: theme tokens live in
+`Tokens.axaml` ThemeDictionaries (keep Light/Dark key sets identical); the terminal's in `Terminal/TerminalTheme`.

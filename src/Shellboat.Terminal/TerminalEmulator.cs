@@ -15,12 +15,15 @@ public sealed class TerminalEmulator
     private readonly XtermSharp.Terminal _terminal;
     private readonly Delegate _delegate;
 
-    public TerminalEmulator(int cols = 80, int rows = 24)
+    public const int DefaultScrollback = 5000;
+
+    /// <param name="scrollback">Lines of history kept above the screen.</param>
+    public TerminalEmulator(int cols = 80, int rows = 24, int scrollback = DefaultScrollback)
     {
         _delegate = new Delegate(this);
         // ConvertEol off: a remote PTY already sends CRLF; converting would double-space nothing but would
         // break programs that move the cursor with a bare LF.
-        var options = new TerminalOptions { Cols = cols, Rows = rows, ConvertEol = false, TermName = "xterm-256color" };
+        var options = new TerminalOptions { Cols = cols, Rows = rows, ConvertEol = false, TermName = "xterm-256color", Scrollback = Math.Max(0, scrollback) };
         _terminal = new XtermSharp.Terminal(_delegate, options);
     }
 
