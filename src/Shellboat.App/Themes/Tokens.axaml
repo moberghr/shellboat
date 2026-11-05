@@ -28,8 +28,11 @@
 
   <FontFamily x:Key="MonoFontFamily">JetBrains Mono,Cascadia Mono,Cascadia Code,Menlo,Consolas,DejaVu Sans Mono,monospace</FontFamily>
 
-  <!-- Folder / ssh / rdp glyphs (16×16). -->
+  <!-- Folder / ssh / rdp glyphs (16×16). PathIcon FILLS its geometry, so every glyph is a closed shape;
+       F0 = even-odd fill, which turns the inner rectangles into cut-outs (screen) and the shapes inside them back to ink. -->
   <StreamGeometry x:Key="Icon.Folder">M1.5,3.5 L6,3.5 L7.5,5 L14.5,5 L14.5,13 L1.5,13 Z</StreamGeometry>
-  <StreamGeometry x:Key="Icon.Ssh">M1.5,2.5 L14.5,2.5 L14.5,13.5 L1.5,13.5 Z M4,6 L6.5,8 L4,10 M8,10.5 L12,10.5</StreamGeometry>
-  <StreamGeometry x:Key="Icon.Rdp">M1.5,2.5 L14.5,2.5 L14.5,11 L1.5,11 Z M5.5,14 L10.5,14 M8,11 L8,14</StreamGeometry>
+  <!-- SSH: terminal window with a heavy title bar, a ">" prompt and a "_" cursor. -->
+  <StreamGeometry x:Key="Icon.Ssh">F0 M1,2 L15,2 L15,14 L1,14 Z M2.3,4.4 L13.7,4.4 L13.7,12.7 L2.3,12.7 Z M4,6.2 L7.6,8.5 L4,10.8 L4,9.3 L5.4,8.5 L4,7.7 Z M8.4,10 L12,10 L12,11.3 L8.4,11.3 Z</StreamGeometry>
+  <!-- RDP: monitor on a stand with a 2×2 tiled desktop on the screen. -->
+  <StreamGeometry x:Key="Icon.Rdp">F0 M1,1.5 L15,1.5 L15,11.5 L1,11.5 Z M2.3,2.8 L13.7,2.8 L13.7,10.2 L2.3,10.2 Z M5.3,3.9 L7.7,3.9 L7.7,6.2 L5.3,6.2 Z M8.3,3.9 L10.7,3.9 L10.7,6.2 L8.3,6.2 Z M5.3,6.8 L7.7,6.8 L7.7,9.1 L5.3,9.1 Z M8.3,6.8 L10.7,6.8 L10.7,9.1 L8.3,9.1 Z M7.2,11.5 L8.8,11.5 L8.8,13.3 L7.2,13.3 Z M4.5,13.3 L11.5,13.3 L11.5,14.5 L4.5,14.5 Z</StreamGeometry>
 </ResourceDictionary>

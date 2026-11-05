@@ -22,6 +22,9 @@ public abstract partial class TreeNodeViewModel : ObservableObject
     /// <summary>Resource key of the row glyph (Icon.Folder / Icon.Ssh / Icon.Rdp).</summary>
     public abstract string IconKey { get; }
 
+    /// <summary>Resource key of the glyph's tint (muted for folders, the kind colour for connections).</summary>
+    public abstract string IconBrushKey { get; }
+
     public ObservableCollection<TreeNodeViewModel> Children { get; } = [];
 }
 
@@ -35,7 +38,9 @@ public sealed class FolderNodeViewModel(Folder folder) : TreeNodeViewModel
 
     public override string Subtitle => "";
 
-    public override string IconKey => "Icon.Folder";
+    public override string IconKey => ConnectionGlyph.FolderIcon;
+
+    public override string IconBrushKey => ConnectionGlyph.FolderBrush;
 }
 
 public sealed class ConnectionNodeViewModel(ConnectionEntry entry) : TreeNodeViewModel
@@ -50,7 +55,9 @@ public sealed class ConnectionNodeViewModel(ConnectionEntry entry) : TreeNodeVie
         ? Entry.Host
         : $"{Entry.Host}:{Entry.EffectivePort}";
 
-    public override string IconKey => Entry.Kind == ConnectionKind.Rdp ? "Icon.Rdp" : "Icon.Ssh";
+    public override string IconKey => ConnectionGlyph.IconKey(Entry.Kind);
+
+    public override string IconBrushKey => ConnectionGlyph.BrushKey(Entry.Kind);
 
     public bool IsRdp => Entry.Kind == ConnectionKind.Rdp;
 }
