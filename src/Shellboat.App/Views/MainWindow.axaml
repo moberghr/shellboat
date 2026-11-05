@@ -5,6 +5,7 @@
         x:Class="Shellboat.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Shellboat"
+        Icon="/Assets/shellboat-256.png"
         Width="1280" Height="800" MinWidth="720" MinHeight="420"
         Background="{DynamicResource Bg.Window}">
 

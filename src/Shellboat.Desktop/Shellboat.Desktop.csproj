@@ -5,6 +5,9 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>shellboat</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Win32 icon baked into the .exe (Explorer, taskbar, Alt+Tab); ignored for osx-*/linux-* RIDs. The window
+         icon is separate (Shellboat.App/Assets, set in MainWindow.axaml). Forward slashes for cross-publishing. -->
+    <ApplicationIcon>../../assets/brand/icons/shellboat.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

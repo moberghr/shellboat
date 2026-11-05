@@ -31,6 +31,7 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
 dotnet build
 ./build/native.sh            # RDP engine: needs FreeRDP 3 (macOS: brew install cmake pkgconf freerdp)
 SHELLBOAT_PROFILE=dev dotnet run --project src/Shellboat.Desktop
+SHELLBOAT_PROFILE=dev ./build/macos-app.sh --run   # macOS: as dist/Shellboat.app, with the Dock icon
 ```
 
 SSH works without the native build. Without it, an RDP connect reports that the engine is missing.

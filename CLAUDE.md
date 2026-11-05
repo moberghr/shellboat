@@ -26,6 +26,8 @@
 - Native RDP wrapper: `./build/native.sh` (macOS: `brew install cmake pkgconf freerdp`; Linux: FreeRDP 3 dev
   packages). Output lands in `native/out/<rid>/` and is copied next to the app by `Shellboat.Rdp.csproj`.
 - Run: `SHELLBOAT_PROFILE=dev dotnet run --project src/Shellboat.Desktop` (isolated config + keychain namespace).
+  On macOS a bare `dotnet run` gets the generic "exec" Dock icon; `./build/macos-app.sh --run` runs it as
+  `dist/Shellboat.app` (Info.plist + `assets/brand/icons/shellboat.icns`). `--release` = self-contained publish.
 - Format: `dotnet format --verbosity quiet`
 
 ## Layout

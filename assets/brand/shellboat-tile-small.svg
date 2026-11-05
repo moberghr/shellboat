@@ -1,0 +1,21 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- <=24px simplification: no waterline, solid sails, heavier prompt so it survives at 16px. -->
+  <defs>
+    <!-- Bearing's graphite tile: CSS linear-gradient(155deg, #1E2630, #12161C). -->
+    <linearGradient id="tile" x1="0" y1="0" x2="0.4226" y2="0.9063">
+      <stop offset="0" stop-color="#1E2630"/>
+      <stop offset="1" stop-color="#12161C"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="255" height="255" rx="56" ry="56" fill="url(#tile)" stroke="#2A323C" stroke-width="1"/>
+  <!-- 100-viewBox mark scaled x1.52 (=>152px) and centred ((256-152)/2 = 52). -->
+  <g transform="translate(52 52) scale(1.52)">
+
+    <path d="M52 8 L52 50 L18 50 Z" fill="#D8DEE6"/>
+    <path d="M60 18 L84 50 L60 50 Z" fill="#35D0BE"/>
+    <path d="M4 56 H96 L80 88 H20 Z" fill="#35D0BE"/>
+    <path d="M30 63 L44 72 L30 81" stroke="#12161C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M52 81 H66" stroke="#12161C" stroke-width="7" stroke-linecap="round"/>
+
+  </g>
+</svg>

@@ -1,0 +1,22 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- App icon tile: the Shellboat mark (sailboat, >_ prompt cut into the hull) on Bearing's graphite tile. Master for raster icons >24px. -->
+  <defs>
+    <!-- Bearing's graphite tile: CSS linear-gradient(155deg, #1E2630, #12161C). -->
+    <linearGradient id="tile" x1="0" y1="0" x2="0.4226" y2="0.9063">
+      <stop offset="0" stop-color="#1E2630"/>
+      <stop offset="1" stop-color="#12161C"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="255" height="255" rx="56" ry="56" fill="url(#tile)" stroke="#2A323C" stroke-width="1"/>
+  <!-- 100-viewBox mark scaled x1.52 (=>152px) and centred ((256-152)/2 = 52). -->
+  <g transform="translate(52 52) scale(1.52)">
+
+    <path d="M52 10 L52 52 L22 52 Z" fill="#D8DEE6" stroke="#D8DEE6" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M58 22 L78 52 L58 52 Z" fill="#35D0BE" opacity="0.7" stroke="#35D0BE" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M8 58 H92 L78 84 H22 Z" fill="#35D0BE" stroke="#35D0BE" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M34 63 L44 70 L34 77" stroke="#12161C" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50 77 H62" stroke="#12161C" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M12 92 Q20 88 28 92 T44 92 T60 92 T76 92 T88 92" stroke="#35D0BE" stroke-width="1.6" opacity="0.4" stroke-linecap="round"/>
+
+  </g>
+</svg>
