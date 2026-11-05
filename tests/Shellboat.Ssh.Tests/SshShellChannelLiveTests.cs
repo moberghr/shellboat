@@ -20,11 +20,16 @@ public class SshShellChannelLiveTests
         Ssh = ssh ?? new SshSettings(SshAuthMethod.Password),
     };
 
+    /// <summary>
+    /// Runs <paramref name="command"/> and waits for its output. The end marker is typed as MARK-"END" so the PTY's
+    /// echo of the command line can't satisfy the wait — only the shell's real output prints MARK-END. (Waiting on
+    /// the echo returned before the output on slow CI runners.)
+    /// </summary>
     private static async Task<string> RunAsync(IShellChannel channel, string command)
     {
         var output = new ConcurrentQueue<byte[]>();
         channel.DataReceived += output.Enqueue;
-        channel.Write(Encoding.UTF8.GetBytes(command + "\n"));
+        channel.Write(Encoding.UTF8.GetBytes(command + "; echo MARK-\"END\"\n"));
         var deadline = DateTime.UtcNow.AddSeconds(10);
         var text = "";
         while (DateTime.UtcNow < deadline)
@@ -51,7 +56,7 @@ public class SshShellChannelLiveTests
         await using (var channel = new SshShellChannel(Entry(), new SshCredentials(SshTestServer.Password, null), trust, prompter))
         {
             await channel.ConnectAsync(100, 30, default);
-            var text = await RunAsync(channel, "echo $TERM; stty size; echo MARK-END");
+            var text = await RunAsync(channel, "echo $TERM; stty size");
             Assert.Contains("xterm-256color", text);
             Assert.Contains("30 100", text);
         }
@@ -77,7 +82,7 @@ public class SshShellChannelLiveTests
         await channel.ConnectAsync(80, 24, default);
         channel.Resize(132, 43);
         await Task.Delay(300);
-        Assert.Contains("43 132", await RunAsync(channel, "stty size; echo MARK-END"));
+        Assert.Contains("43 132", await RunAsync(channel, "stty size"));
     }
 
     [SkippableFact]
@@ -118,7 +123,7 @@ public class SshShellChannelLiveTests
         Skip.IfNot(File.Exists(key), "test key missing — run ./build/test-sshd.sh");
         await using var channel = new SshShellChannel(Entry(new SshSettings(SshAuthMethod.PrivateKey, key)), new SshCredentials(null, null), new MemoryTrustStore(), new ScriptedPrompter(true));
         await channel.ConnectAsync(80, 24, default);
-        Assert.Contains("shellboat", await RunAsync(channel, "whoami; echo MARK-END"));
+        Assert.Contains("shellboat", await RunAsync(channel, "whoami"));
     }
 
     [SkippableFact]

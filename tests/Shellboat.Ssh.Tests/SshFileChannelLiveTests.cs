@@ -28,7 +28,7 @@ public class SshFileChannelLiveTests
         var output = new ConcurrentQueue<byte[]>();
         shell.DataReceived += output.Enqueue;
         await shell.ConnectAsync(80, 24, default);
-        shell.Write(Encoding.UTF8.GetBytes($"mkdir -p sftp-live && printf '{content}' > sftp-live/{name} && echo MARK-DONE\n"));
+        shell.Write(Encoding.UTF8.GetBytes($"mkdir -p sftp-live && printf '{content}' > sftp-live/{name} && echo MARK-\"DONE\"\n")); // quoted: the PTY echo of this line must not match the wait below
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (DateTime.UtcNow < deadline && !Encoding.UTF8.GetString(output.SelectMany(b => b).ToArray()).Contains("MARK-DONE\r\n"))
         {
