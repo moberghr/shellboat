@@ -29,3 +29,13 @@
 - `RoyalTsImporter` reads the `.rtsz` XML for structure only. Royal's encrypted password fields are counted
   and reported, **never decrypted** — do not add reverse-engineering of Royal's encryption.
 - Royal object ids are reused, so re-importing the same document updates connections instead of duplicating.
+
+## §1.6 — Ásbrú import
+- `AsbruImporter` reads `asbru_export.yml` (or `asbru.yml` → `environments`) with YamlDotNet. Ásbrú UUIDs are
+  reused, so re-importing updates instead of duplicating.
+- Exports carry **plain-text** passwords: they travel only as `ImportedSecret` (redacted `ToString`) into the
+  keychain via `AsbruImportApplier`; with no keychain they are dropped and the user is told. The summary tells
+  the user to delete the export file.
+- Ásbrú's encrypted config passwords (hex "Salted__…") are counted, **never decrypted**.
+- `/cert-ignore` is not carried over — RDP certificates are always verified (§1.2). YAML errors report a
+  position only, never file content.

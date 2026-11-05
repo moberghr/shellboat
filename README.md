@@ -22,6 +22,8 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
 - **Import from Royal TSX / Royal TS** (`.rtsz`): folders, SSH and RDP connections, hosts, ports, users and key
   paths. Royal's saved passwords are encrypted with an undocumented scheme and are **not** imported; you're asked
   on first connect, or you can import them from KeePass.
+- **Import from Ásbrú Connection Manager** (`asbru_export.yml`): groups, SSH and RDP connections, users,
+  key files and passwords (into the keychain). Delete the export afterwards — it holds passwords in plain text.
 - **Import from KeePass**: reads any `.kdbx` through `keepassxc-cli`. KeePass groups become folders and
   passwords go into the keychain.
 

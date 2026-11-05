@@ -7,6 +7,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Shellboat.Persistence.Tests" />
   </ItemGroup>
 

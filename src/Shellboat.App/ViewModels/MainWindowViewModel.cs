@@ -24,6 +24,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly FileChannelFactory _fileFactory;
     private readonly ICredentialImporter _importer;
     private readonly Func<string, CancellationToken, Task<RoyalImportResult>> _royalReader;
+    private readonly Func<string, CancellationToken, Task<AsbruImportResult>> _asbruReader;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTabs))]
@@ -39,9 +40,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ShellChannelFactory shellFactory,
         FileChannelFactory fileFactory,
         ICredentialImporter importer,
-        Func<string, CancellationToken, Task<RoyalImportResult>>? royalReader = null)
+        Func<string, CancellationToken, Task<RoyalImportResult>>? royalReader = null,
+        Func<string, CancellationToken, Task<AsbruImportResult>>? asbruReader = null)
     {
         _royalReader = royalReader ?? RoyalTsImporter.ReadFileAsync;
+        _asbruReader = asbruReader ?? AsbruImporter.ReadFileAsync;
         Tree = tree;
         _secrets = secrets;
         _dialogs = dialogs;
@@ -254,6 +257,31 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         StatusText = notes[0];
         await _dialogs.ShowMessageAsync("Royal TSX import", string.Join("\n\n", notes));
+    }
+
+    [RelayCommand]
+    private async Task ImportAsbruAsync()
+    {
+        var path = await _dialogs.PickFileAsync("Import Ásbrú Connection Manager export", "Ásbrú export", ["*.yml", "*.yaml"]);
+        if (path is null)
+        {
+            return;
+        }
+
+        AsbruImportResult result;
+        try
+        {
+            result = await _asbruReader(path, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is CredentialImportException or IOException or UnauthorizedAccessException)
+        {
+            await _dialogs.ShowMessageAsync("Import failed", ex.Message);
+            return;
+        }
+
+        var outcome = await AsbruImportApplier.ApplyAsync(Tree, _secrets, result, CancellationToken.None);
+        StatusText = outcome.Notes[0];
+        await _dialogs.ShowMessageAsync("Ásbrú import", string.Join("\n\n", outcome.Notes));
     }
 
     public Task MoveAsync(TreeNodeViewModel dragged, FolderNodeViewModel? target) => dragged switch

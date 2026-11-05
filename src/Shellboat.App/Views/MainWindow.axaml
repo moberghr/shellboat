@@ -30,6 +30,7 @@
               <Button.Flyout>
                 <MenuFlyout Placement="BottomEdgeAlignedLeft">
                   <MenuItem Header="From Royal TSX / Royal TS (.rtsz)…" Command="{Binding ImportRoyalCommand}"/>
+                  <MenuItem Header="From Ásbrú Connection Manager (.yml)…" Command="{Binding ImportAsbruCommand}"/>
                   <MenuItem Header="From KeePass (.kdbx)…" Command="{Binding ImportKeePassCommand}"/>
                 </MenuFlyout>
               </Button.Flyout>
@@ -87,7 +88,7 @@
       <Grid Grid.Column="2">
         <TextBlock IsVisible="{Binding !HasTabs}" HorizontalAlignment="Center" VerticalAlignment="Center"
                    TextAlignment="Center" Classes="Caption"
-                   Text="Double-click a connection to open it.&#10;Ctrl+N adds one; Import pulls them from Royal TSX or KeePass."/>
+                   Text="Double-click a connection to open it.&#10;Ctrl+N adds one; Import pulls them from Royal TSX, Ásbrú or KeePass."/>
 
         <TabControl Name="SessionTabs" IsVisible="{Binding HasTabs}" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}" Padding="0">
           <TabControl.ItemTemplate>

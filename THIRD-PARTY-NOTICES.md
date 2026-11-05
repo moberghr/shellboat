@@ -10,6 +10,7 @@ licenses apply to those parts.
 | [FreeRDP](https://www.freerdp.com/) | linked at runtime (not vendored) | Apache-2.0 |
 | [SSH.NET](https://github.com/sshnet/SSH.NET) | NuGet | MIT |
 | [NStack.Core](https://github.com/gui-cs/NStack) | NuGet | MIT |
+| [YamlDotNet](https://github.com/aaubry/YamlDotNet) (Ásbrú import) | NuGet | MIT |
 | [Avalonia](https://avaloniaui.net/) | NuGet | MIT |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | NuGet | MIT |
 
