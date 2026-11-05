@@ -56,6 +56,7 @@
                   <ContextMenu>
                     <MenuItem Header="Connect" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ConnectCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Open SFTP (files)" IsVisible="{Binding IsSsh}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenSftpCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Copy password" IsVisible="{Binding IsConnection}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CopyPasswordCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Edit / Rename" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).EditCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Duplicate" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DuplicateCommand}" CommandParameter="{Binding}"/>
                     <MenuItem Header="Change icon…" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ChangeIconCommand}" CommandParameter="{Binding}"/>
@@ -94,14 +95,46 @@
         <TabControl Name="SessionTabs" IsVisible="{Binding HasTabs}" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}" Padding="0">
           <TabControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SessionTabViewModel">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Width="13" Height="13" Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
-                          Foreground="{Binding IconBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
-                <Ellipse Width="7" Height="7" Fill="{DynamicResource Ok.Green}" IsVisible="{Binding IsConnected}"/>
-                <Ellipse Width="7" Height="7" Fill="{DynamicResource Error.Red}" IsVisible="{Binding !IsConnected}"/>
-                <TextBlock Text="{Binding Title}" FontSize="13" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                <Button Content="✕" Padding="4,0" FontSize="11" Background="Transparent" Command="{Binding CloseCommand}" ToolTip.Tip="Close"/>
-              </StackPanel>
+              <Grid RowDefinitions="*,Auto" Background="Transparent">
+                <Grid.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="Duplicate tab" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DuplicateTabCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Open SFTP (files)" IsVisible="{Binding IsSsh}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenSftpForTabCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Reconnect" IsVisible="{Binding CanReconnect}" Command="{Binding ConnectCommand}"/>
+                    <MenuItem Header="Copy password" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CopyTabPasswordCommand}" CommandParameter="{Binding}"/>
+                    <Separator/>
+                    <MenuItem Header="Rename tab…" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RenameTabCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Tab color" ItemsSource="{Binding TabColorOptions}">
+                      <MenuItem.ItemContainerTheme>
+                        <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:TabColorOption">
+                          <Setter Property="Header" Value="{Binding Label}"/>
+                          <Setter Property="Command" Value="{Binding Apply}"/>
+                          <Setter Property="Icon">
+                            <Template>
+                              <Ellipse Width="10" Height="10" Fill="{Binding SwatchBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                            </Template>
+                          </Setter>
+                        </ControlTheme>
+                      </MenuItem.ItemContainerTheme>
+                    </MenuItem>
+                    <MenuItem Header="Change icon…" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ChangeTabIconCommand}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Show in connection tree" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ShowTabInTreeCommand}" CommandParameter="{Binding}"/>
+                    <Separator/>
+                    <MenuItem Header="Close" Command="{Binding CloseCommand}"/>
+                    <MenuItem Header="Close other tabs" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseOtherTabsCommand}" CommandParameter="{Binding}"/>
+                  </ContextMenu>
+                </Grid.ContextMenu>
+                <Border Grid.Row="1" Height="3" CornerRadius="1.5" Margin="0,3,0,0" IsVisible="{Binding HasTabColor}"
+                        Background="{Binding TabColor, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Width="13" Height="13" Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                            Foreground="{Binding IconBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                  <Ellipse Width="7" Height="7" Fill="{DynamicResource Ok.Green}" IsVisible="{Binding IsConnected}"/>
+                  <Ellipse Width="7" Height="7" Fill="{DynamicResource Error.Red}" IsVisible="{Binding !IsConnected}"/>
+                  <TextBlock Text="{Binding Title}" FontSize="13" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                  <Button Content="✕" Padding="4,0" FontSize="11" Background="Transparent" Command="{Binding CloseCommand}" ToolTip.Tip="Close"/>
+                </StackPanel>
+              </Grid>
             </DataTemplate>
           </TabControl.ItemTemplate>
           <TabControl.ContentTemplate>

@@ -66,6 +66,21 @@ public sealed partial class ConnectionTreeViewModel : ObservableObject
         return _store.SaveAsync(next, CancellationToken.None);
     }
 
+    /// <summary>Selects a connection and opens its folders (clearing a filter that would hide it). False when it
+    /// no longer exists.</summary>
+    public bool Reveal(Guid id)
+    {
+        if (Document.Connections.All(c => c.Id != id))
+        {
+            return false;
+        }
+
+        Filter = "";
+        ExpandAncestors(id);
+        Rebuild(id);
+        return true;
+    }
+
     public async Task<Folder> AddFolderAsync(string name, Guid? parentId)
     {
         var folder = new Folder(Guid.NewGuid(), name, parentId);

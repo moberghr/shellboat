@@ -69,6 +69,19 @@ internal sealed class FakeDialogs : IDialogService
         return Task.CompletedTask;
     }
 
+    /// <summary>Stands in for the user copying something themselves.</summary>
+    public void UserCopies(string text) => Clipboard = text;
+
+    public Task ClearClipboardIfAsync(string text)
+    {
+        if (Clipboard == text)
+        {
+            Clipboard = null;
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task<bool> ConfirmHostKeyAsync(TrustPrompt prompt) => Task.FromResult(ConfirmAnswer);
 
     public Task<CertificateTrustDecision> ConfirmRdpCertificateAsync(RdpCertificatePrompt prompt) => Task.FromResult(CertificateTrustDecision.Reject);

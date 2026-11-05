@@ -157,6 +157,14 @@ public sealed class DialogService : IDialogService
         }
     });
 
+    public Task ClearClipboardIfAsync(string text) => OnUi(async () =>
+    {
+        if (Owner?.Clipboard is { } clipboard && await clipboard.TryGetTextAsync() == text)
+        {
+            await clipboard.ClearAsync();
+        }
+    });
+
     public Task<string?> PickFolderAsync(string title) => OnUi(async () =>
     {
         if (Owner is not { } owner)

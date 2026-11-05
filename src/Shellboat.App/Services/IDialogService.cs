@@ -41,6 +41,10 @@ public interface IDialogService
 
     Task SetClipboardTextAsync(string text);
 
+    /// <summary>Empties the clipboard, but only while it still holds <paramref name="text"/> — whatever the
+    /// user copied since is left alone.</summary>
+    Task ClearClipboardIfAsync(string text);
+
     /// <returns>Local path of the chosen folder, or null when cancelled.</returns>
     Task<string?> PickFolderAsync(string title);
 }

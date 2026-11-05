@@ -9,6 +9,9 @@
 - `connections.json` and `known_hosts.json` hold no secrets; written atomically, mode 0600 on Unix.
 - Never put a secret in an exception message, `ToString()`, log line or process argument. `CliResult.Detail`
   is stderr only, because stdout can be the secret.
+- "Copy password" (tree row menu) is the one path a secret takes to the clipboard: only on the user's click, the
+  status bar names the connection never the secret, and `ClearClipboardIfAsync` wipes it after 30 s only while
+  the clipboard still holds it.
 
 ## §1.2 — Host trust
 - SSH: `JsonTrustStore` (own known_hosts). Unknown → `ITrustPrompter`; **Changed → hard block**, the user

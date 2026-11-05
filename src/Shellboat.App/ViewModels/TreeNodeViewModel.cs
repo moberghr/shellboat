@@ -36,6 +36,9 @@ public abstract partial class TreeNodeViewModel : ObservableObject
     /// <summary>SSH connection rows get the "Open SFTP" menu item.</summary>
     public virtual bool IsSsh => false;
 
+    /// <summary>Connection rows (not folders) get the "Copy password" menu item.</summary>
+    public virtual bool IsConnection => false;
+
     public ObservableCollection<TreeNodeViewModel> Children { get; } = [];
 }
 
@@ -81,4 +84,6 @@ public sealed class ConnectionNodeViewModel(ConnectionEntry entry) : TreeNodeVie
     public bool IsRdp => Entry.Kind == ConnectionKind.Rdp;
 
     public override bool IsSsh => Entry.Kind == ConnectionKind.Ssh;
+
+    public override bool IsConnection => true;
 }

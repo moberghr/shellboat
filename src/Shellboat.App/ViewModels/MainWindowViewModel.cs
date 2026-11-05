@@ -73,11 +73,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        SessionTabViewModel tab = c.Entry.Kind == ConnectionKind.Rdp
-            ? new RdpTabViewModel(c.Entry, _credentials, _dialogs)
-            : new TerminalTabViewModel(c.Entry, _shellFactory, _credentials, _dialogs);
-        await OpenTabAsync(tab);
+        await OpenTabAsync(NewSessionTab(c.Entry));
     }
+
+    private SessionTabViewModel NewSessionTab(ConnectionEntry entry) => entry.Kind == ConnectionKind.Rdp
+        ? new RdpTabViewModel(entry, _credentials, _dialogs)
+        : new TerminalTabViewModel(entry, _shellFactory, _credentials, _dialogs);
+
+    private SftpTabViewModel NewSftpTab(ConnectionEntry entry) => new(entry, _fileFactory, _credentials, _dialogs);
 
     /// <summary>File browser (SFTP) for an SSH connection, in its own tab.</summary>
     [RelayCommand]
@@ -88,7 +91,48 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        await OpenTabAsync(new SftpTabViewModel(c.Entry, _fileFactory, _credentials, _dialogs));
+        await OpenTabAsync(NewSftpTab(c.Entry));
+    }
+
+    /// <summary>How long a copied password stays on the clipboard before it is wiped.</summary>
+    public TimeSpan PasswordClipboardLifetime { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>The pending clipboard wipe of the last copied password (awaited by tests).</summary>
+    internal Task PendingClipboardClear { get; private set; } = Task.CompletedTask;
+
+    /// <summary>Saved password to the clipboard (e.g. for sudo), wiped after <see cref="PasswordClipboardLifetime"/>
+    /// unless the user has copied something else since. The secret never reaches the status bar.</summary>
+    [RelayCommand]
+    private async Task CopyPasswordAsync(TreeNodeViewModel? node)
+    {
+        if ((node ?? Tree.Selected) is ConnectionNodeViewModel c)
+        {
+            await CopyPasswordOfAsync(c.Entry);
+        }
+    }
+
+    private async Task CopyPasswordOfAsync(ConnectionEntry entry)
+    {
+        // Key-auth connections never store a login password, but sudo still wants one: ask once, and with
+        // "remember" it lands in the (otherwise unused) Password slot for next time.
+        var password = await _credentials.GetSavedAsync(entry, SecretPurpose.Password, CancellationToken.None)
+            ?? await _credentials.PromptAsync(entry, SecretPurpose.Password,
+                "No password is saved for this connection. Enter it to copy it (e.g. for sudo).", CancellationToken.None);
+        if (string.IsNullOrEmpty(password))
+        {
+            StatusText = $"No password copied for \"{entry.Name}\".";
+            return;
+        }
+
+        await _dialogs.SetClipboardTextAsync(password);
+        StatusText = $"Password for \"{entry.Name}\" copied — the clipboard clears in {PasswordClipboardLifetime.TotalSeconds:0} s.";
+        PendingClipboardClear = ClearPasswordLaterAsync(password);
+    }
+
+    private async Task ClearPasswordLaterAsync(string password)
+    {
+        await Task.Delay(PasswordClipboardLifetime);
+        await _dialogs.ClearClipboardIfAsync(password);
     }
 
     private async Task OpenTabAsync(SessionTabViewModel tab)
@@ -168,7 +212,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var picker = new IconPickerViewModel(node.Title, node.DefaultGlyphName, defaultBrush, node.Icon);
         if (await _dialogs.PickIconAsync(picker))
         {
-            await Tree.SetIconAsync(node.Id, picker.Result);
+            await SetIconAsync(node.Id, picker.Result);
         }
     }
 

@@ -19,6 +19,12 @@ on the left, **SSH terminals** and **RDP desktops** in tabs on the right. It run
   shown, text clipboard works in both directions, and certificates prompt on first use or when they change.
 - Secrets are stored in the **OS keychain** (macOS Keychain, Windows Credential Manager, libsecret). Nothing
   secret is written to `connections.json`.
+- **Copy password**: right-click a connection → *Copy password* puts its saved keychain password on the clipboard
+  (handy for `sudo`). With none saved (e.g. key-auth connections) it asks once and can remember it. The clipboard
+  is wiped after 30 s unless you have copied something else since.
+- **Tab menu** (right-click a tab): duplicate the session, open SFTP (SSH), reconnect, copy password, rename the tab,
+  tab colour, change the connection's icon, show it in the tree, close / close other tabs. Tab title and colour last
+  for the session only.
 - **Custom icons**: right-click a connection or folder → *Change icon…* to pick one of 22 built-in glyphs (server,
   database, cloud, firewall, …) and a colour. Re-importing keeps the icons you chose.
 - **Import from Royal TSX / Royal TS** (`.rtsz`): folders, SSH and RDP connections, hosts, ports, users and key
