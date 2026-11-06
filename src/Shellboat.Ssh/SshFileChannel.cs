@@ -94,8 +94,15 @@ public sealed class SshFileChannel : IFileChannel
 
     public Task DownloadAsync(string remotePath, Stream destination, IProgress<long>? progress, CancellationToken ct)
     {
-        var report = progress is null ? null : new Progress<DownloadFileProgressReport>(r => progress.Report((long)r.TotalBytesDownloaded));
+        // Forward inline, not through Progress<T>: that posts each report asynchronously, so the last one could land
+        // after the task completed (CI saw 0 bytes reported). The caller's IProgress decides its own marshalling.
+        var report = progress is null ? null : new ByteProgress(progress);
         return Client().DownloadFileAsync(remotePath, destination, report, ct);
+    }
+
+    private sealed class ByteProgress(IProgress<long> inner) : IProgress<DownloadFileProgressReport>
+    {
+        public void Report(DownloadFileProgressReport value) => inner.Report((long)value.TotalBytesDownloaded);
     }
 
     public ValueTask DisposeAsync()
