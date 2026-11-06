@@ -47,8 +47,9 @@
         </Border>
 
         <Grid>
-        <!-- Empty state: only while nothing is saved yet. -->
-        <StackPanel IsVisible="{Binding Tree.HasNoConnections}" VerticalAlignment="Center" HorizontalAlignment="Center"
+        <!-- Empty state: only while nothing is saved yet. ZIndex: the TreeView below shares this cell and its
+             Transparent background is hit-testable, so without it the empty tree swallows the button's clicks. -->
+        <StackPanel ZIndex="1" IsVisible="{Binding Tree.HasNoConnections}" VerticalAlignment="Center" HorizontalAlignment="Center"
                     Margin="16" Spacing="10">
           <TextBlock Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"
                      Text="No connections yet. Add one below, or bring them over from another app."/>
