@@ -16,3 +16,6 @@ Compiled into `src/Shellboat.Terminal` via `<Compile Include>`; `.editorconfig` 
     codepoints together, corrupting the previous cell.
   - `TerminalOptions.cs`: `Scrollback` gets a setter (upstream: get-only, fixed at 1000 in the constructor) so the
     scrollback length is a user setting. Pinned by `Scrollback_length_follows_the_option`.
+  - `Terminal.cs` (SaveCursor): also saves margin/origin/wraparound modes. Upstream's `RestoreCursor` restored them
+    from fields nothing ever wrote, so the first ESC 8 / `CSI u` (shell prompts send these) turned auto-wrap off and
+    long lines ran off the right edge. Pinned by `Long_lines_still_wrap_after_save_and_restore_cursor`.

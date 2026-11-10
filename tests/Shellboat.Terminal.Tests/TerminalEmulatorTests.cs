@@ -129,6 +129,19 @@ public class TerminalEmulatorTests
         Assert.Equal("a", s[2, 0].Text);
     }
 
+    /// <summary>Pins the vendored Terminal.SaveCursor fix (NOTICE.md): ESC 7 / ESC 8 (prompts do this) must not
+    /// switch auto-wrap off, or a long line (cat of an SSH key) runs off the right edge instead of wrapping.</summary>
+    [Fact]
+    public void Long_lines_still_wrap_after_save_and_restore_cursor()
+    {
+        var t = new TerminalEmulator(10, 5);
+        t.Feed("\u001b7\u001b8abcdefghijKLM");
+        var s = t.Snapshot();
+        Assert.Equal("j", s[9, 0].Text);
+        Assert.Equal("K", s[0, 1].Text);
+        Assert.Equal("M", s[2, 1].Text);
+    }
+
     [Fact]
     public void Palette_has_the_xterm_cube_and_greys()
     {

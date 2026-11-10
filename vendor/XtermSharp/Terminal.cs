@@ -894,6 +894,10 @@ namespace XtermSharp {
 		{
 			var buffer = Buffer;
 			buffer.SaveCursor (CurAttr);
+			savedMarginMode = MarginMode;
+			savedOriginMode = OriginMode;
+			savedWraparound = Wraparound;
+			savedReverseWraparound = ReverseWraparound;
 		}
 
 		/// <summary>
