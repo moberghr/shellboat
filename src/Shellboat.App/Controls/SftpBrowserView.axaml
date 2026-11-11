@@ -6,7 +6,7 @@
              x:DataType="vm:SftpTabViewModel"
              Background="{DynamicResource Bg.Window}">
   <DockPanel>
-    <!-- Toolbar: up, refresh, path, download -->
+    <!-- Toolbar: up, refresh, path, download, upload -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="8,6">
       <DockPanel>
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" Margin="0,0,6,0">
@@ -16,6 +16,8 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" Margin="6,0,0,0">
           <Button Classes="Toolbar" Content="Download" Command="{Binding DownloadCommand}" ToolTip.Tip="Download the selection to your Downloads folder"/>
           <Button Classes="Toolbar" Content="Download to…" Command="{Binding DownloadToCommand}" ToolTip.Tip="Choose where to save the selection"/>
+          <Button Classes="Toolbar" Content="Upload…" Command="{Binding UploadFilesCommand}" ToolTip.Tip="Upload files into this folder (or drop files and folders on the list)"/>
+          <Button Classes="Toolbar" Content="Upload folder…" Command="{Binding UploadFolderCommand}" ToolTip.Tip="Upload a whole folder into this folder"/>
           <Button Classes="Toolbar" Content="Cancel" Command="{Binding CancelTransferCommand}" IsVisible="{Binding IsTransferring}"/>
         </StackPanel>
         <TextBox Text="{Binding PathInput}" FontFamily="{DynamicResource MonoFontFamily}" VerticalContentAlignment="Center">
@@ -39,7 +41,7 @@
     </Grid>
 
     <ListBox Name="Files" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}" SelectionMode="Multiple"
-             Background="Transparent" Padding="4,0">
+             Background="Transparent" Padding="4,0" DragDrop.AllowDrop="True">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="vm:RemoteFileItemViewModel">
           <Grid ColumnDefinitions="26,*,100,140" Background="Transparent">

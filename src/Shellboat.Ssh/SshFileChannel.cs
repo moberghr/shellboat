@@ -100,9 +100,46 @@ public sealed class SshFileChannel : IFileChannel
         return Client().DownloadFileAsync(remotePath, destination, report, ct);
     }
 
+    public Task<bool> ExistsAsync(string path, CancellationToken ct) => Client().ExistsAsync(path, ct);
+
+    public Task CreateDirectoryAsync(string path, CancellationToken ct) => Client().CreateDirectoryAsync(path, ct);
+
+    public async Task UploadAsync(Stream source, string remotePath, IProgress<long>? progress, CancellationToken ct)
+    {
+        var client = Client();
+        // Reserve the name with an exclusive create (SSH_FXF_EXCL): it fails on an existing file, so nothing of anyone
+        // else's is ever replaced — and from here on the file is ours, safe to delete if the copy fails.
+        var reserved = await client.OpenAsync(remotePath, FileMode.CreateNew, FileAccess.Write, ct).ConfigureAwait(false);
+        await reserved.DisposeAsync().ConfigureAwait(false);
+        try
+        {
+            // UploadFileAsync pipelines write requests (much faster than a plain stream copy over a long RTT).
+            var report = progress is null ? null : new UploadByteProgress(progress);
+            await client.UploadFileAsync(source, remotePath, true, report, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            try
+            {
+                await client.DeleteFileAsync(remotePath, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Best effort: the caller reports the original failure.
+            }
+
+            throw;
+        }
+    }
+
     private sealed class ByteProgress(IProgress<long> inner) : IProgress<DownloadFileProgressReport>
     {
         public void Report(DownloadFileProgressReport value) => inner.Report((long)value.TotalBytesDownloaded);
+    }
+
+    private sealed class UploadByteProgress(IProgress<long> inner) : IProgress<UploadFileProgressReport>
+    {
+        public void Report(UploadFileProgressReport value) => inner.Report((long)value.TotalBytesUploaded);
     }
 
     public ValueTask DisposeAsync()

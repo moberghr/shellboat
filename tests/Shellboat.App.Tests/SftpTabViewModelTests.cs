@@ -190,6 +190,103 @@ public sealed class SftpTabViewModelTests : IDisposable
         vm.SelectedItems.Add(vm.Items[0]);
         Assert.True(vm.DownloadCommand.CanExecute(null));
     }
+
+    // ---- Upload
+
+    private string LocalFile(string relative, string content)
+    {
+        var path = Path.Combine(_downloads, "src", relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+        return path;
+    }
+
+    [Fact]
+    public async Task Picked_files_upload_into_the_current_folder_and_the_list_refreshes()
+    {
+        var (vm, _, dialogs) = Create();
+        await vm.ConnectAsync();
+        dialogs.PickedFiles = [LocalFile("a.txt", "alpha"), LocalFile("b.bin", "beta!")];
+
+        await vm.UploadFilesCommand.ExecuteAsync(null);
+
+        var server = Server(vm);
+        Assert.Equal("alpha", Encoding.UTF8.GetString(server.Files["/home/u/a.txt"]));
+        Assert.Equal("beta!", Encoding.UTF8.GetString(server.Files["/home/u/b.bin"]));
+        Assert.Contains(vm.Items, i => i.Name == "a.txt");
+        Assert.Contains(vm.Items, i => i.Name == "b.bin");
+        Assert.Equal(2, vm.LastUpload!.Files);
+        Assert.Equal(10, vm.LastUpload.Bytes);
+        Assert.StartsWith("Uploaded 2 file(s)", vm.Message);
+        Assert.False(vm.IsTransferring);
+    }
+
+    [Fact]
+    public async Task Uploading_onto_a_taken_name_keeps_both_and_never_overwrites()
+    {
+        var (vm, _, _) = Create();
+        await vm.ConnectAsync();
+
+        await vm.UploadPathsAsync([LocalFile("notes.txt", "mine")]);
+        await vm.UploadPathsAsync([LocalFile("notes.txt", "mine")]);
+
+        var server = Server(vm);
+        Assert.Equal("hello", Encoding.UTF8.GetString(server.Files["/home/u/notes.txt"]));
+        Assert.Equal("mine", Encoding.UTF8.GetString(server.Files["/home/u/notes (1).txt"]));
+        Assert.Equal("mine", Encoding.UTF8.GetString(server.Files["/home/u/notes (2).txt"]));
+    }
+
+    [Fact]
+    public async Task A_folder_uploads_recursively_into_a_new_remote_folder_and_symlinked_folders_are_not_followed()
+    {
+        var (vm, _, dialogs) = Create();
+        await vm.ConnectAsync();
+        LocalFile(Path.Combine("site", "index.html"), "<h1>");
+        LocalFile(Path.Combine("site", "css", "app.css"), "body{}");
+        var site = Path.Combine(_downloads, "src", "site");
+        Directory.CreateSymbolicLink(Path.Combine(site, "loop"), site);
+        dialogs.PickedFolder = site;
+        await vm.NavigateAsync("/home/u/logs");
+
+        await vm.UploadFolderCommand.ExecuteAsync(null);
+
+        var server = Server(vm);
+        Assert.Equal("<h1>", Encoding.UTF8.GetString(server.Files["/home/u/logs/site/index.html"]));
+        Assert.Equal("body{}", Encoding.UTF8.GetString(server.Files["/home/u/logs/site/css/app.css"]));
+        Assert.False(server.Directories.ContainsKey("/home/u/logs/site/loop"));
+        Assert.Equal(1, vm.LastUpload!.SkippedLinks);
+        Assert.Contains(vm.Items, i => i.Name == "site" && i.IsDirectory);
+    }
+
+    [Fact]
+    public async Task A_failed_upload_is_reported_and_leaves_no_remote_file()
+    {
+        var (vm, _, _) = Create();
+        await vm.ConnectAsync();
+        Server(vm).FailUploadOf = "/home/u/big.iso";
+
+        await vm.UploadPathsAsync([LocalFile("big.iso", "0123456789")]);
+
+        Assert.False(Server(vm).Files.ContainsKey("/home/u/big.iso"));
+        Assert.Equal("transfer failed", vm.Message);
+        Assert.False(vm.IsTransferring);
+        Assert.True(vm.UploadFilesCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData("report.pdf", "/d/report (1).pdf")]
+    [InlineData("Makefile", "/d/Makefile (1)")]
+    [InlineData(".bashrc", "/d/.bashrc (1)")]
+    [InlineData("a.tar.gz", "/d/a.tar (1).gz")]
+    public async Task Unique_remote_path_adds_a_counter_before_the_extension(string name, string expected)
+    {
+        var server = new FakeFileChannel(_ => null, new SshCredentials("pw", null));
+        server.AddDir("/d");
+        server.AddFile($"/d/{name}", "x");
+
+        Assert.Equal(expected, await SftpUploader.UniqueRemotePathAsync(server, "/d", name, default));
+        Assert.Equal("/d/new.txt", await SftpUploader.UniqueRemotePathAsync(server, "/d", "new.txt", default));
+    }
 }
 
 public sealed class SftpContextMenuTests : IDisposable

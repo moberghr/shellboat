@@ -29,6 +29,16 @@ public interface IFileChannel : IAsyncDisposable
     /// <summary>Renames or moves <paramref name="fromPath"/>. Fails when <paramref name="toPath"/> already exists — never overwrites.</summary>
     Task RenameAsync(string fromPath, string toPath, CancellationToken ct);
 
+    Task<bool> ExistsAsync(string path, CancellationToken ct);
+
+    /// <summary>Creates one folder. Fails when <paramref name="path"/> already exists.</summary>
+    Task CreateDirectoryAsync(string path, CancellationToken ct);
+
+    /// <summary>Writes <paramref name="source"/> to a new file at <paramref name="remotePath"/>. Fails when it already
+    /// exists — never overwrites. If the copy fails or is cancelled after the file was created, the partial file is removed.</summary>
+    /// <param name="progress">Total bytes copied so far.</param>
+    Task UploadAsync(Stream source, string remotePath, IProgress<long>? progress, CancellationToken ct);
+
     /// <param name="progress">Total bytes copied so far.</param>
     Task DownloadAsync(string remotePath, Stream destination, IProgress<long>? progress, CancellationToken ct);
 }

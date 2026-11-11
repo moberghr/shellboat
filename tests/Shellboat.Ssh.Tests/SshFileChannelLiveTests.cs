@@ -97,6 +97,81 @@ public class SshFileChannelLiveTests
     }
 
     [SkippableFact]
+    public async Task Uploads_a_new_file_never_overwrites_and_removes_a_failed_one()
+    {
+        SshTestServer.Require();
+        var trust = new MemoryTrustStore();
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        await WriteRemoteFileAsync($"keep-{tag}.txt", "original", trust);
+
+        await using var sftp = new SshFileChannel(Entry(), Password, trust, new ScriptedPrompter(true));
+        await sftp.ConnectAsync(default);
+        var dir = $"{sftp.HomeDirectory}/sftp-live/up-{tag}";
+
+        Assert.False(await sftp.ExistsAsync(dir, default));
+        await sftp.CreateDirectoryAsync(dir, default);
+        Assert.True(await sftp.ExistsAsync(dir, default));
+        await Assert.ThrowsAnyAsync<Exception>(() => sftp.CreateDirectoryAsync(dir, default));
+
+        var content = Encoding.UTF8.GetBytes("uploaded " + new string('x', 100_000));
+        long reported = 0;
+        await sftp.UploadAsync(new MemoryStream(content), $"{dir}/new.txt", new SyncProgress(n => reported = n), default);
+        using (var back = new MemoryStream())
+        {
+            await sftp.DownloadAsync($"{dir}/new.txt", back, null, default);
+            Assert.Equal(content, back.ToArray());
+        }
+
+        Assert.Equal(content.Length, reported);
+
+        // An existing file is refused and left exactly as it was.
+        var keep = $"{sftp.HomeDirectory}/sftp-live/keep-{tag}.txt";
+        await Assert.ThrowsAnyAsync<Exception>(() => sftp.UploadAsync(new MemoryStream("evil"u8.ToArray()), keep, null, default));
+        using (var back = new MemoryStream())
+        {
+            await sftp.DownloadAsync(keep, back, null, default);
+            Assert.Equal("original", Encoding.UTF8.GetString(back.ToArray()));
+        }
+
+        // A source that breaks half-way leaves nothing behind.
+        await Assert.ThrowsAsync<IOException>(() => sftp.UploadAsync(new BreakingStream(64 * 1024), $"{dir}/broken.bin", null, default));
+        Assert.False(await sftp.ExistsAsync($"{dir}/broken.bin", default));
+    }
+
+    /// <summary>Reads <c>goodBytes</c> zeros, then throws — a local disk/network failure mid-upload.</summary>
+    private sealed class BreakingStream(int goodBytes) : Stream
+    {
+        private int _left = goodBytes;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_left <= 0)
+            {
+                throw new IOException("local read failed");
+            }
+
+            var n = Math.Min(count, _left);
+            Array.Clear(buffer, offset, n);
+            _left -= n;
+            return n;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    [SkippableFact]
     public async Task Wrong_password_is_an_authentication_failure()
     {
         SshTestServer.Require();

@@ -159,6 +159,21 @@ public sealed class DialogService : IDialogService
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     });
 
+    public Task<IReadOnlyList<string>> PickFilesAsync(string title) => OnUi<IReadOnlyList<string>>(async () =>
+    {
+        if (Owner is not { } owner)
+        {
+            return [];
+        }
+
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = true,
+        });
+        return [.. files.Select(f => f.TryGetLocalPath()).OfType<string>()];
+    });
+
     public Task SetClipboardTextAsync(string text) => OnUi(async () =>
     {
         if (Owner?.Clipboard is { } clipboard)

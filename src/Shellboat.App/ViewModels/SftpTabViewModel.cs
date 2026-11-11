@@ -13,7 +13,7 @@ public delegate IFileChannel FileChannelFactory(ConnectionEntry connection, SshC
 
 /// <summary>
 /// An SFTP file browser tab for an SSH connection: browse folders, download files/folders into the Downloads folder
-/// (or a chosen one). Same credential and host-key flow as the terminal (<see cref="SshConnectFlow"/>).
+/// (or a chosen one), upload local files/folders into the current folder. Same credential and host-key flow as the terminal (<see cref="SshConnectFlow"/>).
 /// </summary>
 public sealed partial class SftpTabViewModel : SessionTabViewModel
 {
@@ -27,14 +27,14 @@ public sealed partial class SftpTabViewModel : SessionTabViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoUp))]
-    [NotifyCanExecuteChangedFor(nameof(UpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpCommand), nameof(UploadFilesCommand), nameof(UploadFolderCommand))]
     private string _currentPath = "";
 
     [ObservableProperty]
     private string _pathInput = "";
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(DownloadCommand), nameof(DownloadToCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadCommand), nameof(DownloadToCommand), nameof(UploadFilesCommand), nameof(UploadFolderCommand))]
     private bool _isTransferring;
 
     [ObservableProperty]
@@ -169,6 +169,56 @@ public sealed partial class SftpTabViewModel : SessionTabViewModel
     private void CancelTransfer() => _transferCts?.Cancel();
 
     private bool CanDownload() => SelectedItems.Count > 0 && !IsTransferring;
+
+    private bool CanUpload() => CurrentPath.Length > 0 && !IsTransferring;
+
+    [RelayCommand(CanExecute = nameof(CanUpload))]
+    private async Task UploadFilesAsync()
+    {
+        var files = await _dialogs.PickFilesAsync($"Upload to {CurrentPath}");
+        await UploadPathsAsync(files);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUpload))]
+    private async Task UploadFolderAsync()
+    {
+        var folder = await _dialogs.PickFolderAsync($"Upload folder to {CurrentPath}");
+        if (folder is not null)
+        {
+            await UploadPathsAsync([folder]);
+        }
+    }
+
+    /// <summary>Uploads local files/folders (picker or drop) into the folder being shown, then refreshes it.
+    /// Taken names get a " (1)" suffix — nothing on the server is overwritten.</summary>
+    public async Task UploadPathsAsync(IReadOnlyList<string> localPaths)
+    {
+        if (_channel is not { } channel || localPaths.Count == 0 || IsTransferring || CurrentPath.Length == 0)
+        {
+            return;
+        }
+
+        var folder = CurrentPath;
+        var progress = new Progress<UploadProgress>(p => Message = $"Uploading {p.CurrentName} — {p.FilesDone} file(s), {RemoteFileItemViewModel.FormatSize(p.BytesDone)}");
+        await RunTransferAsync("Upload", async ct =>
+        {
+            var summary = await new SftpUploader(channel).UploadAsync(localPaths, folder, progress, ct);
+            LastUpload = summary;
+            var skipped = summary.SkippedLinks > 0 ? $" ({summary.SkippedLinks} linked folder(s) not followed)" : "";
+            return $"Uploaded {summary.Files} file(s), {RemoteFileItemViewModel.FormatSize(summary.Bytes)} to {folder}{skipped}";
+        });
+
+        // Show what arrived (and what a failed run left behind) — but keep the result line, not "n item(s)".
+        if (_channel is { IsConnected: true } && CurrentPath == folder)
+        {
+            var result = Message;
+            await NavigateAsync(folder);
+            Message = result;
+        }
+    }
+
+    /// <summary>The most recent finished upload (for tests).</summary>
+    public UploadSummary? LastUpload { get; private set; }
 
     // ---- Row context menu. Each acts on the right-clicked row, or on the whole selection when that row is part of it.
 
@@ -315,19 +365,28 @@ public sealed partial class SftpTabViewModel : SessionTabViewModel
             return;
         }
 
+        var progress = new Progress<DownloadProgress>(p => Message = $"Downloading {p.CurrentName} — {p.FilesDone} file(s), {RemoteFileItemViewModel.FormatSize(p.BytesDone)}");
+        await RunTransferAsync("Download", async ct =>
+        {
+            var summary = await new SftpDownloader(channel).DownloadAsync([.. items.Select(i => i.Entry)], folder, progress, ct);
+            LastDownload = summary;
+            var skipped = summary.SkippedLinks > 0 ? $" ({summary.SkippedLinks} linked folder(s) not followed)" : "";
+            return $"Downloaded {summary.Files} file(s), {RemoteFileItemViewModel.FormatSize(summary.Bytes)} to {folder}{skipped}";
+        });
+    }
+
+    /// <summary>One transfer at a time: owns <see cref="IsTransferring"/> and the cancel token; the work returns the result line.</summary>
+    private async Task RunTransferAsync(string verb, Func<CancellationToken, Task<string>> work)
+    {
         IsTransferring = true;
         _transferCts = new CancellationTokenSource();
-        var progress = new Progress<DownloadProgress>(p => Message = $"Downloading {p.CurrentName} — {p.FilesDone} file(s), {RemoteFileItemViewModel.FormatSize(p.BytesDone)}");
         try
         {
-            var summary = await new SftpDownloader(channel).DownloadAsync([.. items.Select(i => i.Entry)], folder, progress, _transferCts.Token);
-            var skipped = summary.SkippedLinks > 0 ? $" ({summary.SkippedLinks} linked folder(s) not followed)" : "";
-            Message = $"Downloaded {summary.Files} file(s), {RemoteFileItemViewModel.FormatSize(summary.Bytes)} to {folder}{skipped}";
-            LastDownload = summary;
+            Message = await work(_transferCts.Token);
         }
         catch (OperationCanceledException)
         {
-            Message = "Download cancelled.";
+            Message = $"{verb} cancelled.";
         }
         catch (Exception ex)
         {

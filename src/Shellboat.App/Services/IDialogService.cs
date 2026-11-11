@@ -42,6 +42,9 @@ public interface IDialogService
     /// <returns>Local path of the chosen file, or null when cancelled.</returns>
     Task<string?> PickFileAsync(string title, string fileTypeName, IReadOnlyList<string> patterns);
 
+    /// <returns>Local paths of the chosen files (any type), empty when cancelled.</returns>
+    Task<IReadOnlyList<string>> PickFilesAsync(string title);
+
     Task SetClipboardTextAsync(string text);
 
     /// <summary>Empties the clipboard, but only while it still holds <paramref name="text"/> — whatever the

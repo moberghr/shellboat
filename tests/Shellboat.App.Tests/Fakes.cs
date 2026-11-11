@@ -115,6 +115,10 @@ internal sealed class FakeDialogs : IDialogService
 
     public Task<string?> PickFileAsync(string title, string fileTypeName, IReadOnlyList<string> patterns) => Task.FromResult(PickedFile);
 
+    public List<string> PickedFiles { get; set; } = [];
+
+    public Task<IReadOnlyList<string>> PickFilesAsync(string title) => Task.FromResult<IReadOnlyList<string>>(PickedFiles);
+
     public string? PickedFolder { get; set; }
 
     public Task<string?> PickFolderAsync(string title) => Task.FromResult(PickedFolder);
@@ -230,6 +234,46 @@ internal sealed class FakeFileChannel(Func<SshCredentials, Exception?> outcome, 
         list[index] = list[index] with { Name = Name(toPath), FullPath = toPath };
         Renames.Add((fromPath, toPath));
         return Task.CompletedTask;
+    }
+
+    public Task<bool> ExistsAsync(string path, CancellationToken ct)
+        => Task.FromResult(Files.ContainsKey(path) || Directories.ContainsKey(path));
+
+    public Task CreateDirectoryAsync(string path, CancellationToken ct)
+    {
+        if (Files.ContainsKey(path) || Directories.ContainsKey(path))
+        {
+            return Task.FromException(new IOException($"\"{path}\" already exists."));
+        }
+
+        AddDir(path);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>When set, uploading to this path reads half the source and then throws (the "server" keeps nothing).</summary>
+    public string? FailUploadOf { get; set; }
+
+    public async Task UploadAsync(Stream source, string remotePath, IProgress<long>? progress, CancellationToken ct)
+    {
+        if (Files.ContainsKey(remotePath) || Directories.ContainsKey(remotePath))
+        {
+            throw new IOException($"\"{remotePath}\" already exists.");
+        }
+
+        var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer, ct);
+        if (remotePath == FailUploadOf)
+        {
+            throw new IOException("transfer failed");
+        }
+
+        AddFile(remotePath, "");
+        Files[remotePath] = buffer.ToArray();
+        var parent = Shellboat.App.Services.RemotePath.Parent(remotePath) ?? "/";
+        var list = Directories[parent];
+        var index = list.FindIndex(e => e.FullPath == remotePath);
+        list[index] = list[index] with { Size = Files[remotePath].Length };
+        progress?.Report(Files[remotePath].Length);
     }
 
     public async Task DownloadAsync(string remotePath, Stream destination, IProgress<long>? progress, CancellationToken ct)
