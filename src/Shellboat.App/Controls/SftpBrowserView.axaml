@@ -5,67 +5,189 @@
              x:Class="Shellboat.App.Controls.SftpBrowserView"
              x:DataType="vm:SftpTabViewModel"
              Background="{DynamicResource Bg.Window}">
-  <DockPanel>
-    <!-- Toolbar: up, refresh, path, download, upload -->
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="8,6">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" Margin="0,0,6,0">
-          <Button Classes="Toolbar" Content="↑" Command="{Binding UpCommand}" ToolTip.Tip="Parent folder"/>
-          <Button Classes="Toolbar" Content="⟳" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh"/>
-        </StackPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" Margin="6,0,0,0">
-          <Button Classes="Toolbar" Content="Download" Command="{Binding DownloadCommand}" ToolTip.Tip="Download the selection to your Downloads folder"/>
-          <Button Classes="Toolbar" Content="Download to…" Command="{Binding DownloadToCommand}" ToolTip.Tip="Choose where to save the selection"/>
-          <Button Classes="Toolbar" Content="Upload…" Command="{Binding UploadFilesCommand}" ToolTip.Tip="Upload files into this folder (or drop files and folders on the list)"/>
-          <Button Classes="Toolbar" Content="Upload folder…" Command="{Binding UploadFolderCommand}" ToolTip.Tip="Upload a whole folder into this folder"/>
-          <Button Classes="Toolbar" Content="Cancel" Command="{Binding CancelTransferCommand}" IsVisible="{Binding IsTransferring}"/>
-        </StackPanel>
-        <TextBox Text="{Binding PathInput}" FontFamily="{DynamicResource MonoFontFamily}" VerticalContentAlignment="Center">
-          <TextBox.KeyBindings>
-            <KeyBinding Gesture="Enter" Command="{Binding NavigateCommand}" CommandParameter="{Binding PathInput}"/>
-          </TextBox.KeyBindings>
-        </TextBox>
-      </DockPanel>
-    </Border>
+  <UserControl.Styles>
+    <!-- Pane under a drag (rows dragged from the other pane, or files from the OS file manager). -->
+    <Style Selector="Border.pane">
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.pane.dropzone">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent.Brand}"/>
+    </Style>
+  </UserControl.Styles>
 
+  <DockPanel>
     <!-- Status line -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10,3">
       <TextBlock Text="{Binding Message}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
     </Border>
 
-    <!-- Column header -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="26,*,100,140" Margin="12,6,12,2">
-      <TextBlock Grid.Column="1" Text="Name" Classes="Caption"/>
-      <TextBlock Grid.Column="2" Text="Size" Classes="Caption" HorizontalAlignment="Right" Margin="0,0,12,0"/>
-      <TextBlock Grid.Column="3" Text="Modified" Classes="Caption"/>
-    </Grid>
+    <!-- Transfers: queued / running / finished, newest first. Hidden until the first transfer. -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0"
+            IsVisible="{Binding HasTransfers}">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="10,4,8,2">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+            <Button Classes="Toolbar" Content="Cancel" Command="{Binding CancelTransferCommand}" IsVisible="{Binding IsTransferring}" ToolTip.Tip="Cancel the running transfer"/>
+            <Button Classes="Toolbar" Content="Clear finished" Command="{Binding ClearFinishedTransfersCommand}"/>
+          </StackPanel>
+          <TextBlock Text="Transfers" Classes="Caption" VerticalAlignment="Center"/>
+        </DockPanel>
+        <ScrollViewer MaxHeight="132" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Transfers}" Margin="8,0,8,6">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TransferViewModel">
+                <Grid ColumnDefinitions="18,2*,3*,120,26" Margin="2,2" ToolTip.Tip="{Binding Tooltip}">
+                  <TextBlock Grid.Column="0" Text="{Binding Arrow}" VerticalAlignment="Center" Foreground="{DynamicResource Accent.Brand}"/>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Route}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Text="{Binding StatusText}" Classes="Caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+                  <ProgressBar Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding Percent}" IsIndeterminate="{Binding IsIndeterminate}"
+                               VerticalAlignment="Center" MinWidth="0"/>
+                  <Button Grid.Column="4" Classes="Toolbar" Content="✕" Command="{Binding CancelCommand}" IsVisible="{Binding IsActive}"
+                          ToolTip.Tip="Cancel this transfer" HorizontalAlignment="Right"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
 
-    <ListBox Name="Files" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}" SelectionMode="Multiple"
-             Background="Transparent" Padding="4,0" DragDrop.AllowDrop="True">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:RemoteFileItemViewModel">
-          <Grid ColumnDefinitions="26,*,100,140" Background="Transparent">
-            <Grid.ContextMenu>
+    <Grid ColumnDefinitions="*,Auto,*">
+      <!-- ======== Left: this computer ======== -->
+      <DockPanel Grid.Column="0" DataContext="{Binding Local}" x:DataType="vm:LocalPaneViewModel">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="8,6">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" Margin="0,0,6,0">
+              <Button Classes="Toolbar" Content="↑" Command="{Binding UpCommand}" ToolTip.Tip="Parent folder"/>
+              <Button Classes="Toolbar" Content="⟳" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh"/>
+              <Button Classes="Toolbar" Content="⌂" Command="{Binding HomeCommand}" ToolTip.Tip="Home folder"/>
+            </StackPanel>
+            <TextBox Text="{Binding PathInput}" FontFamily="{DynamicResource MonoFontFamily}" VerticalContentAlignment="Center"
+                     ToolTip.Tip="This computer">
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding NavigateCommand}" CommandParameter="{Binding PathInput}"/>
+              </TextBox.KeyBindings>
+            </TextBox>
+          </DockPanel>
+        </Border>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="26,*,90,130" Margin="12,6,12,2">
+          <TextBlock Grid.Column="1" Text="This computer" Classes="Caption"/>
+          <TextBlock Grid.Column="2" Text="Size" Classes="Caption" HorizontalAlignment="Right" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="3" Text="Modified" Classes="Caption"/>
+        </Grid>
+        <Border Name="LocalPane" Classes="pane">
+          <ListBox Name="LocalFiles" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}" SelectionMode="Multiple"
+                   Background="Transparent" Padding="4,0">
+            <ListBox.ContextMenu>
               <ContextMenu>
-                <MenuItem Header="Open" IsVisible="{Binding IsDirectory}" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}"/>
-                <MenuItem Header="Download" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemCommand}" CommandParameter="{Binding}"/>
-                <MenuItem Header="Download to…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemToCommand}" CommandParameter="{Binding}"/>
-                <Separator/>
-                <MenuItem Header="Copy path" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).CopyPathCommand}" CommandParameter="{Binding}"/>
-                <MenuItem Header="Rename…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).RenameCommand}" CommandParameter="{Binding}"/>
-                <Separator/>
-                <MenuItem Header="Properties" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).PropertiesCommand}" CommandParameter="{Binding}"/>
+                <MenuItem Header="New folder…" Command="{Binding NewFolderCommand}"/>
+                <MenuItem Header="Refresh" Command="{Binding RefreshCommand}"/>
+                <MenuItem Header="Show in file manager" Command="{Binding ShowInFileManagerCommand}" CommandParameter="{x:Null}"/>
               </ContextMenu>
-            </Grid.ContextMenu>
-            <PathIcon Grid.Column="0" Width="14" Height="14" HorizontalAlignment="Left"
-                      Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
-                      Foreground="{Binding IconBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
-            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-            <TextBlock Grid.Column="2" Text="{Binding SizeText}" Classes="Caption" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
-            <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Classes="Caption" VerticalAlignment="Center"/>
-          </Grid>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
+            </ListBox.ContextMenu>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:LocalFileItemViewModel">
+                <Grid ColumnDefinitions="26,*,90,130" Background="Transparent">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Open" Command="{Binding $parent[ListBox].((vm:LocalPaneViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Upload to server folder" Command="{Binding $parent[c:SftpBrowserView].((vm:SftpTabViewModel)DataContext).UploadLocalItemCommand}" CommandParameter="{Binding}"/>
+                      <Separator/>
+                      <MenuItem Header="Show in file manager" Command="{Binding $parent[ListBox].((vm:LocalPaneViewModel)DataContext).ShowInFileManagerCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Copy path" Command="{Binding $parent[ListBox].((vm:LocalPaneViewModel)DataContext).CopyPathCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Rename…" Command="{Binding $parent[ListBox].((vm:LocalPaneViewModel)DataContext).RenameCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="New folder…" Command="{Binding $parent[ListBox].((vm:LocalPaneViewModel)DataContext).NewFolderCommand}"/>
+                      <Separator/>
+                      <MenuItem Header="Properties" Command="{Binding $parent[ListBox].((vm:LocalPaneViewModel)DataContext).PropertiesCommand}" CommandParameter="{Binding}"/>
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <PathIcon Grid.Column="0" Width="14" Height="14" HorizontalAlignment="Left"
+                            Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                            Foreground="{Binding IconBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="2" Text="{Binding SizeText}" Classes="Caption" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                  <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Classes="Caption" VerticalAlignment="Center"/>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
+      </DockPanel>
+
+      <GridSplitter Grid.Column="1" Width="1" Background="{DynamicResource Border}" ResizeDirection="Columns"/>
+
+      <!-- ======== Right: the server (unchanged toolbar) ======== -->
+      <DockPanel Grid.Column="2">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Chrome}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="8,6">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" Margin="0,0,6,0">
+              <Button Classes="Toolbar" Content="↑" Command="{Binding UpCommand}" ToolTip.Tip="Parent folder"/>
+              <Button Classes="Toolbar" Content="⟳" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh"/>
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" Margin="6,0,0,0">
+              <Button Classes="Toolbar" Content="Download" Command="{Binding DownloadCommand}" ToolTip.Tip="Download the selection to your Downloads folder"/>
+              <Button Classes="Toolbar" Content="Download to…" Command="{Binding DownloadToCommand}" ToolTip.Tip="Choose where to save the selection"/>
+              <Button Classes="Toolbar" Content="Upload…" Command="{Binding UploadFilesCommand}" ToolTip.Tip="Upload files into this folder (or drag them here from the left pane or your file manager)"/>
+              <Button Classes="Toolbar" Content="Upload folder…" Command="{Binding UploadFolderCommand}" ToolTip.Tip="Upload a whole folder into this folder"/>
+            </StackPanel>
+            <TextBox Text="{Binding PathInput}" FontFamily="{DynamicResource MonoFontFamily}" VerticalContentAlignment="Center"
+                     ToolTip.Tip="{Binding Connection.Host}">
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding NavigateCommand}" CommandParameter="{Binding PathInput}"/>
+              </TextBox.KeyBindings>
+            </TextBox>
+          </DockPanel>
+        </Border>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="26,*,90,130" Margin="12,6,12,2">
+          <TextBlock Grid.Column="1" Text="{Binding Connection.Host, StringFormat='Server — {0}'}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Grid.Column="2" Text="Size" Classes="Caption" HorizontalAlignment="Right" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="3" Text="Modified" Classes="Caption"/>
+        </Grid>
+        <Border Name="RemotePane" Classes="pane">
+          <ListBox Name="Files" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}" SelectionMode="Multiple"
+                   Background="Transparent" Padding="4,0" DragDrop.AllowDrop="True">
+            <ListBox.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="New folder…" Command="{Binding NewFolderCommand}"/>
+                <MenuItem Header="Refresh" Command="{Binding RefreshCommand}"/>
+                <Separator/>
+                <MenuItem Header="Upload files…" Command="{Binding UploadFilesCommand}"/>
+                <MenuItem Header="Upload folder…" Command="{Binding UploadFolderCommand}"/>
+              </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:RemoteFileItemViewModel">
+                <Grid ColumnDefinitions="26,*,90,130" Background="Transparent">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Open" IsVisible="{Binding IsDirectory}" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Download to left pane folder" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemToLocalCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Download" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Download to…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).DownloadItemToCommand}" CommandParameter="{Binding}"/>
+                      <Separator/>
+                      <MenuItem Header="Copy path" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).CopyPathCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="Rename…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).RenameCommand}" CommandParameter="{Binding}"/>
+                      <MenuItem Header="New folder…" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).NewFolderCommand}"/>
+                      <Separator/>
+                      <MenuItem Header="Properties" Command="{Binding $parent[ListBox].((vm:SftpTabViewModel)DataContext).PropertiesCommand}" CommandParameter="{Binding}"/>
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <PathIcon Grid.Column="0" Width="14" Height="14" HorizontalAlignment="Left"
+                            Data="{Binding IconKey, Converter={x:Static c:ResourceGeometry.Instance}}"
+                            Foreground="{Binding IconBrushKey, Converter={x:Static c:ResourceBrush.Instance}}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="2" Text="{Binding SizeText}" Classes="Caption" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                  <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Classes="Caption" VerticalAlignment="Center"/>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
+      </DockPanel>
+    </Grid>
   </DockPanel>
 </UserControl>

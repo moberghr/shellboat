@@ -19,6 +19,11 @@
   into the folder being shown (`SftpUploader`). Never overwrites: a taken name becomes "name (1).ext", and
   `SshFileChannel.UploadAsync` reserves the file with an exclusive create (`FileMode.CreateNew`) before copying, so a
   failed/cancelled upload deletes only its own partial file. Symlinked local folders are not followed.
+- The SFTP tab is two panes: this computer on the left (`LocalPaneViewModel` over `Services/LocalFiles` — browse, open
+  with the OS, rename, new folder; never deletes or overwrites), the server on the right. Rows dragged between the
+  panes (`Controls/PaneDragController`, pointer capture — not OS drag, §2.6) upload/download into the pane's folder or
+  the folder row they land on. Every transfer runs through one queue (`SftpTabViewModel.Transfers.cs`), one at a time,
+  and shows as a `TransferViewModel` row (totals pre-counted, %, speed, time left, outcome, per-row cancel).
 - Not yet: ssh-agent, jump hosts, port forwarding, SFTP delete/move between folders/replace-on-upload.
 
 ## §9.3 — RDP

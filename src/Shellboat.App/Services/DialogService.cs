@@ -174,6 +174,23 @@ public sealed class DialogService : IDialogService
         return [.. files.Select(f => f.TryGetLocalPath()).OfType<string>()];
     });
 
+    public Task OpenLocalAsync(string path) => OnUi(async () =>
+    {
+        if (Owner?.Launcher is not { } launcher)
+        {
+            return;
+        }
+
+        if (Directory.Exists(path))
+        {
+            await launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
+        }
+        else
+        {
+            await launcher.LaunchFileInfoAsync(new FileInfo(path));
+        }
+    });
+
     public Task SetClipboardTextAsync(string text) => OnUi(async () =>
     {
         if (Owner?.Clipboard is { } clipboard)

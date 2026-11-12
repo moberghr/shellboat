@@ -119,6 +119,14 @@ internal sealed class FakeDialogs : IDialogService
 
     public Task<IReadOnlyList<string>> PickFilesAsync(string title) => Task.FromResult<IReadOnlyList<string>>(PickedFiles);
 
+    public List<string> Opened { get; } = [];
+
+    public Task OpenLocalAsync(string path)
+    {
+        Opened.Add(path);
+        return Task.CompletedTask;
+    }
+
     public string? PickedFolder { get; set; }
 
     public Task<string?> PickFolderAsync(string title) => Task.FromResult(PickedFolder);
@@ -276,8 +284,16 @@ internal sealed class FakeFileChannel(Func<SshCredentials, Exception?> outcome, 
         progress?.Report(Files[remotePath].Length);
     }
 
+    /// <summary>When set, every download waits for it (or for cancellation) before copying — holds the transfer queue.</summary>
+    public TaskCompletionSource? DownloadGate { get; set; }
+
     public async Task DownloadAsync(string remotePath, Stream destination, IProgress<long>? progress, CancellationToken ct)
     {
+        if (DownloadGate is { } gate)
+        {
+            await gate.Task.WaitAsync(ct);
+        }
+
         var data = Files[remotePath];
         if (remotePath == FailDownloadOf)
         {

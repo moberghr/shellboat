@@ -31,6 +31,33 @@ public sealed class SftpDownloader(IFileChannel channel)
         return new DownloadSummary(_files, _bytes, _skippedLinks, _saved);
     }
 
+    /// <summary>Files and bytes a download of <paramref name="items"/> will copy — folders are listed recursively
+    /// (symlinked folders not followed, matching the copy itself).</summary>
+    public static async Task<(int Files, long Bytes)> TotalsAsync(IFileChannel channel, IReadOnlyList<RemoteFileEntry> items, CancellationToken ct)
+    {
+        var files = 0;
+        long bytes = 0;
+        var pending = new Stack<RemoteFileEntry>(items);
+        while (pending.TryPop(out var item))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!item.IsDirectory)
+            {
+                files++;
+                bytes += item.Size;
+            }
+            else if (!item.IsSymbolicLink)
+            {
+                foreach (var child in await channel.ListAsync(item.FullPath, ct))
+                {
+                    pending.Push(child);
+                }
+            }
+        }
+
+        return (files, bytes);
+    }
+
     private async Task CopyAsync(RemoteFileEntry item, string localFolder, IProgress<DownloadProgress>? progress, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
